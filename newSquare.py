@@ -11,9 +11,8 @@ os.system('clear')
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 750
 (centerScreenX, centerScreenY) = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
-boxWidth = 100
-wallWidth = 50
-
+boxWidth = 200
+wallWidth = 40
 
 
 ########################################
@@ -116,7 +115,7 @@ def snap(point):
     for line in lines:
         if abs(p1 - line.p1[0]) <= 25 and abs(p2 - line.p1[1]) <= 25:   
             return (line.p1[0], line.p1[1])
-        elif abs(p1 - line.p2[0]) <= 25 and (p2 - line.p2[1]) <= 25:   
+        elif abs(p1 - line.p2[0]) <= 25 and abs(p2 - line.p2[1]) <= 25:   
             return (line.p2[0], line.p2[1])
     return point
 
@@ -147,6 +146,16 @@ def checkComplete():
             count += 1
             
     return count
+
+########################################
+
+def checkBearingCircle(point):
+    (x, y) = point
+    dist = math.sqrt((centerScreenX - x) ** 2 + (centerScreenY - y) ** 2)
+    if dist > 60:
+        return True
+    
+    return False
 
 ########################################
 
@@ -182,9 +191,15 @@ while beginFrame():
 
     # circle square
     pygame.draw.rect(canvas, color = (129, 235, 125), rect = (80,10,60,60))
-    arcFont = pygame.font.Font(None, 25)
-    circleObj = arcFont.render('circle', True, (30, 30, 30), None)
+    circleFont = pygame.font.Font(None, 25)
+    circleObj = circleFont.render('circle', True, (30, 30, 30), None)
     canvas.blit(circleObj, (86,30))
+    
+    # eraser
+    pygame.draw.rect(canvas, color = (234, 224, 153), rect = (150,10,60,60))
+    eraserFont = pygame.font.Font(None, 25)
+    eraserObj = eraserFont.render('eraser', True, (30, 30, 30), None)
+    canvas.blit(eraserObj, (154,30))
     
     # USER INPUT & UPDATE ##################
             
@@ -198,6 +213,8 @@ while beginFrame():
                 MODE = 1
             if current_mouse_pos[0] >= 80 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= 140 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN:
                 MODE = 2
+            if current_mouse_pos[0] >= 150 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= 210 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN:
+                MODE = 3
                 
         elif event.type == pygame.MOUSEBUTTONDOWN and MODE == 1:
             if not waiting_for_second_click:
@@ -206,31 +223,34 @@ while beginFrame():
                 if PROGRAM == 1:
                     first_click = anchorSquare(first_click)
                 if PROGRAM == 2:
-                    if lines != []:
-                        first_click = snap(first_click)
-                        if first_click in linesDict:
-                            linesDict[first_click] += 1
+                    if checkBearingCircle(first_click):
+                        if lines != []:
+                            first_click = snap(first_click)
+                            if first_click in linesDict:
+                                linesDict[first_click] += 1
+                            else:
+                                linesDict[first_click] = 1
                         else:
                             linesDict[first_click] = 1
-                    else:
-                        linesDict[first_click] = 1
+                    else: 
+                        waiting_for_second_click = False
             else: 
                 second_click = event.pos
                 waiting_for_second_click = False
                 if PROGRAM == 1:
                     second_click = anchorSquare(second_click)
                 if PROGRAM == 2:
-                    if lines != []:
-                        second_click = snap(second_click)
-                        if second_click in linesDict:
-                            linesDict[second_click] += 1
+                    if checkBearingCircle(second_click):
+                        if lines != []:
+                            second_click = snap(second_click)
+                            if second_click in linesDict:
+                                linesDict[second_click] += 1
+                            else:
+                                linesDict[second_click] = 1
                         else:
                             linesDict[second_click] = 1
-                    else:
-                        linesDict[second_click] = 1
                         
                 lines.append(Line(first_click, second_click))
-                print(linesDict)
                 MODE = 0
                 
         elif event.type == pygame.MOUSEBUTTONDOWN and MODE == 2:
@@ -249,6 +269,44 @@ while beginFrame():
                 #elif mode == MODE_CIRCLE:
                 #    pass
 
+        elif event.type == pygame.MOUSEBUTTONDOWN and MODE == 3:
+            erase_click_x, erase_click_y = event.pos
+            smallest_dist = SCREEN_WIDTH
+            lineObj = None
+            for line in lines:
+                x_1, y_1 = line.p1
+                x_2, y_2 = line.p2
+                
+                t = ((erase_click_x - x_1) * (x_2 - x_1)) + ((erase_click_y - y_1) * (y_2 - y_1)) / (((x_2 - x_1) ** 2) + ((y_2 - y_1)**2))
+            
+                if t < 0 and abs(x_1 - erase_click_x) <= 25 and abs(y_1 - erase_click_y) <= 25:
+                    tempDist = math.sqrt(((erase_click_x - x_1) ** 2) + ((erase_click_y - y_1)**2))
+                    if tempDist < smallest_dist:
+                        lineObj = line
+                        smallest_dist = tempDist
+                
+                elif t > 1 and abs(x_2 - erase_click_x) <= 25 and abs(y_2 - erase_click_y) <= 25:
+                    tempDist = math.sqrt(((erase_click_x - x_2) ** 2) + ((erase_click_y - y_2)**2))
+                    if tempDist < smallest_dist:
+                        lineObj = line
+                        smallest_dist = tempDist
+                
+                else:
+                    x_close = x_1 + (t * (x_2 - x_1))
+                    y_close = y_1 + (t * (y_2 - y_1))
+                    
+                    tempDist = math.sqrt(((erase_click_x - x_close) ** 2) + ((erase_click_y - y_close)**2))
+                    if tempDist < smallest_dist:
+                        lineObj = line
+                        smallest_dist = tempDist
+
+                print(line)
+                    
+            print(lineObj)
+            # lines.remove(lineObj)
+            MODE = 0
+                
+                
         
     # DRAW #################################
     
