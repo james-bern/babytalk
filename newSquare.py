@@ -1,9 +1,10 @@
-# TODO: numpy 2D arrays might be useful?
 
 import pygame
 import sys
 import os
 import math
+import ezdxf
+from ezdxf import recover, units
 
 pygame.init()
 os.system('clear')
@@ -21,6 +22,51 @@ canvas = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
 event_queue = None
 
+
+########################################
+
+fidget = "fidgetBearing.dxf"
+lineTest = "lineTest.dxf"
+combo = "combo.dxf"
+
+########################################
+
+PPM = 10
+
+def draw_line_entity(e):
+    start_x, start_y = e.dxf.start[0], e.dxf.start[1]
+    end_x, end_y = e.dxf.end[0], e.dxf.end[1]
+    pygame.draw.line(canvas, "BLACK",
+                     (centerScreenX + PPM * start_x, centerScreenY - PPM * start_y),
+                     (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y))
+
+def draw_circle_entity(e):
+    center_x, center_y = e.dxf.center[0], e.dxf.center[1]
+    radius = e.dxf.radius
+    pygame.draw.circle(canvas, "BLACK", (centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), PPM * radius, width = 2)
+
+###DXF READER###########################
+
+def readDXF():
+    try:
+        doc, auditor = recover.readfile(combo)
+    except IOError:
+        print(f"Not a DXF file or a generic I/O error.")
+        sys.exit(1)
+    except ezdxf.DXFStructureError:
+        print(f"Invalid or corrupted DXF file.")
+        sys.exit(2)
+    
+   
+    msp = doc.modelspace()
+
+    for e in msp:
+        if e.dxftype() == "LINE":
+            draw_line_entity(e)
+        if e.dxftype() == "ARC":
+            draw_circle_entity(e)
+        
+    
 ########################################
 def grid():
     blockSize = 25
@@ -53,8 +99,15 @@ def beginFrame():
 
 class Line:
     def __init__(self, p1, p2):
+        # World Coordinates
         self.p1 = p1
         self.p2 = p2
+        
+    def draw(self):
+        # Converts to Pixel Coordinates and Draws
+        pygame.draw.line(canvas, "BLACK",
+                        (centerScreenX + PPM * self.p1[0], centerScreenY - PPM * self.p1[1]),
+                        (centerScreenX + PPM * self.p2[0], centerScreenY - PPM * self.p2[1]))
 
 ########################################
 
@@ -129,7 +182,7 @@ MODE_LINE   = 1
 MODE_BOX    = 2
 MODE_CIRCLE = 3
 MODE = 0
-PROGRAM = 2
+PROGRAM = 3
 
 mode = MODE_NONE
 waiting_for_second_click = False
@@ -160,6 +213,12 @@ def checkBearingCircle(point):
 ########################################
 
 
+# TODO
+# Line List needs to be in MM
+# 1 / PPM
+
+readDXF()
+
 while beginFrame():
 
     #######################################
@@ -181,7 +240,9 @@ while beginFrame():
         pygame.draw.circle(canvas, color = "dark green", center = (centerScreenX + (boxWidth + wallWidth), centerScreenY + (boxWidth + wallWidth)), radius = 4)
 
     elif PROGRAM == 2:
-        pygame.draw.circle(canvas, color = "black", center = (centerScreenX, centerScreenY), radius = 60, width = 2)
+        pygame.draw.circle(canvas, color = "red", center = (centerScreenX, centerScreenY), radius = 60, width = 2)
+        pygame.draw.circle(canvas, color = "yellow", center = (centerScreenX, centerScreenY), radius = 40, width = 2)
+        
         
     # DRAWING LEGEND #######################
     pygame.draw.rect(canvas, color = (162, 189, 235), rect = (10,10,60,60))
@@ -323,7 +384,7 @@ while beginFrame():
         pygame.draw.circle(canvas, "RED", first_click, current_rad, width=2)
 
     for line in lines:
-        pygame.draw.line(canvas, "RED", line.p1, line.p2, 2)
+        pygame.draw.line(canvas, "GREEN", line.p1, line.p2, 2)
         
     for circle in circles:
         pygame.draw.circle(canvas, "GREEN", circle.p1, circle.r, width=2)
