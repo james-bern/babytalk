@@ -5,6 +5,7 @@ import os
 import math
 import ezdxf
 from ezdxf import recover, units
+from ezdxf.addons import r12writer
 
 pygame.init()
 os.system('clear')
@@ -15,6 +16,13 @@ SCREEN_HEIGHT = 750
 boxWidth = 200
 wallWidth = 40
 
+########################################
+
+lines = []
+linesDict = {}
+circles = []
+linesMM = []
+circlesMM = []
 
 ########################################
 
@@ -31,20 +39,20 @@ combo = "combo.dxf"
 
 ########################################
 
-PPM = 10
+PPM = 3.7795275591
 
 def draw_line_entity(e):
     start_x, start_y = e.dxf.start[0], e.dxf.start[1]
     end_x, end_y = e.dxf.end[0], e.dxf.end[1]
-    pygame.draw.line(canvas, "BLACK",
-                     (centerScreenX + PPM * start_x, centerScreenY - PPM * start_y),
-                     (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y))
-
+    # pygame.draw.line(canvas, "BLACK", (centerScreenX + PPM * start_x, centerScreenY - PPM * start_y), (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y))
+    lines.append(Line((centerScreenX + PPM * start_x , centerScreenY - PPM * start_y), (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y)))
+    
 def draw_circle_entity(e):
     center_x, center_y = e.dxf.center[0], e.dxf.center[1]
     radius = e.dxf.radius
-    pygame.draw.circle(canvas, "BLACK", (centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), PPM * radius, width = 2)
-
+    # pygame.draw.circle(canvas, "BLACK", (centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), PPM * radius, width = 2)
+    circles.append(Circle((centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), radius * PPM))
+    
 ###DXF READER###########################
 
 def readDXF():
@@ -68,6 +76,7 @@ def readDXF():
         
     
 ########################################
+
 def grid():
     blockSize = 25
     for x in range(0, SCREEN_WIDTH, blockSize):
@@ -76,6 +85,30 @@ def grid():
             pygame.draw.rect(canvas, color = "light grey", rect = rectGrid, width = 1)
 
 
+########################################
+
+
+def lineUnitConverter(point):
+    x, y = point
+    
+    xZero = x - centerScreenX
+    yZero = centerScreenY - y
+    
+    return (xZero / PPM, yZero / PPM)
+    
+########################################
+
+def circleUnitConverter(coords, r):
+    x, y = coords
+    radius = r
+    
+    xNew = x - centerScreenX
+    yNew = centerScreenY - y
+    
+    newCoords = (xNew / PPM, yNew / PPM)
+    
+    return newCoords, r / PPM
+    
 
 ########################################
 
@@ -106,8 +139,8 @@ class Line:
     def draw(self):
         # Converts to Pixel Coordinates and Draws
         pygame.draw.line(canvas, "BLACK",
-                        (centerScreenX + PPM * self.p1[0], centerScreenY - PPM * self.p1[1]),
-                        (centerScreenX + PPM * self.p2[0], centerScreenY - PPM * self.p2[1]))
+                        (PPM * self.p1[0], PPM * self.p1[1]),
+                        (PPM * self.p2[0], PPM * self.p2[1]))
 
 ########################################
 
@@ -115,12 +148,6 @@ class Circle:
     def __init__(self, p1, r):
         self.p1 = p1
         self.r = r
-        
-########################################
-
-lines = []
-linesDict = {}
-circles = []
 
 ########################################
 
@@ -259,8 +286,14 @@ while beginFrame():
     # eraser
     pygame.draw.rect(canvas, color = (234, 224, 153), rect = (150,10,60,60))
     eraserFont = pygame.font.Font(None, 25)
-    eraserObj = eraserFont.render('eraser', True, (30, 30, 30), None)
+    eraserObj = eraserFont.render('cancel', True, (30, 30, 30), None)
     canvas.blit(eraserObj, (154,30))
+    
+    # end
+    pygame.draw.rect(canvas, color = "red", rect = (SCREEN_WIDTH - 70,10,60,60))
+    endFont = pygame.font.Font(None, 30)
+    endObj = endFont.render('END', True, (30, 30, 30), None)
+    canvas.blit(endObj, (SCREEN_WIDTH - 62 ,30))
     
     # USER INPUT & UPDATE ##################
             
@@ -276,6 +309,8 @@ while beginFrame():
                 MODE = 2
             if current_mouse_pos[0] >= 150 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= 210 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN:
                 MODE = 3
+            if current_mouse_pos[0] >= SCREEN_WIDTH - 70 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= SCREEN_WIDTH - 10 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN:
+                MODE = 4
                 
         elif event.type == pygame.MOUSEBUTTONDOWN and MODE == 1:
             if not waiting_for_second_click:
@@ -295,6 +330,17 @@ while beginFrame():
                             linesDict[first_click] = 1
                     else: 
                         waiting_for_second_click = False
+                        
+                if PROGRAM == 3:
+                    if lines != []:
+                        first_click = snap(first_click)
+                        if first_click in linesDict:
+                            linesDict[first_click] += 1
+                        else:
+                            linesDict[first_click] = 1
+                    else:
+                        linesDict[first_click] = 1
+            
             else: 
                 second_click = event.pos
                 waiting_for_second_click = False
@@ -310,6 +356,16 @@ while beginFrame():
                                 linesDict[second_click] = 1
                         else:
                             linesDict[second_click] = 1
+                if PROGRAM == 3:
+                    if lines != []:
+                        second_click = snap(second_click)
+                        if second_click in linesDict:
+                            linesDict[second_click] += 1
+                        else:
+                            linesDict[second_click] = 1
+                    else:
+                        linesDict[second_click] = 1
+                        
                         
                 lines.append(Line(first_click, second_click))
                 MODE = 0
@@ -360,14 +416,35 @@ while beginFrame():
                     if tempDist < smallest_dist:
                         lineObj = line
                         smallest_dist = tempDist
-
-                print(line)
-                    
-            print(lineObj)
-            # lines.remove(lineObj)
+                
             MODE = 0
-                
-                
+                   
+        elif MODE == 4:
+            if lines != []:
+                for line in lines:
+                    linesMM.append([lineUnitConverter(line.p1), lineUnitConverter(line.p2)])
+                    
+            if circles != []:
+                for circle in circles:
+                    newCoords, r = circleUnitConverter(circle.p1, circle.r)
+                    toAdd = [newCoords, r]
+                    if toAdd not in circlesMM: 
+                        circlesMM.append(toAdd)
+                    
+            print(linesMM)
+            print(circlesMM)
+            
+            with r12writer("test.dxf") as dxf:
+                dxf.units = units.MM
+                for line in linesMM:
+                    dxf.add_line(start = line[0], end = line[1], color = 3)
+        
+                for circle in circlesMM:
+                    dxf.add_circle(center = circle[0], radius = circle[1], color = 4)
+            
+            print("Your file has been exported")
+            
+            exit()
         
     # DRAW #################################
     
@@ -384,8 +461,12 @@ while beginFrame():
         pygame.draw.circle(canvas, "RED", first_click, current_rad, width=2)
 
     for line in lines:
-        pygame.draw.line(canvas, "GREEN", line.p1, line.p2, 2)
+        pygame.draw.line(canvas, "GREEN", (line.p1[0], line.p1[1]), (line.p2[0], line.p2[1]), 2)
         
     for circle in circles:
         pygame.draw.circle(canvas, "GREEN", circle.p1, circle.r, width=2)
 
+
+
+
+                
