@@ -57,7 +57,7 @@ def draw_circle_entity(e):
 
 def readDXF():
     try:
-        doc, auditor = recover.readfile(combo)
+        doc, auditor = recover.readfile(fidget)
     except IOError:
         print(f"Not a DXF file or a generic I/O error.")
         sys.exit(1)
@@ -214,6 +214,7 @@ PROGRAM = 3
 mode = MODE_NONE
 waiting_for_second_click = False
 waiting_for_second_click_circle = False
+waiting_for_second_box_click = False
 first_click = None
 completeCircle = False
 
@@ -287,7 +288,13 @@ while beginFrame():
     pygame.draw.rect(canvas, color = (234, 224, 153), rect = (150,10,60,60))
     eraserFont = pygame.font.Font(None, 25)
     eraserObj = eraserFont.render('cancel', True, (30, 30, 30), None)
-    canvas.blit(eraserObj, (154,30))
+    canvas.blit(eraserObj, (154, 30))
+
+    # box square
+    pygame.draw.rect(canvas, color = (129, 235, 125), rect = (220,10,60,60))
+    boxFont = pygame.font.Font(None, 25)
+    boxObj = boxFont.render('box', True, (30, 30, 30), None)
+    canvas.blit(boxObj, (234,30))
     
     # end
     pygame.draw.rect(canvas, color = "red", rect = (SCREEN_WIDTH - 70,10,60,60))
@@ -311,6 +318,8 @@ while beginFrame():
                 MODE = 3
             if current_mouse_pos[0] >= SCREEN_WIDTH - 70 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= SCREEN_WIDTH - 10 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN:
                 MODE = 4
+            if current_mouse_pos[0] >= 220 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= 280 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN: 
+                MODE = 5
                 
         elif event.type == pygame.MOUSEBUTTONDOWN and MODE == 1:
             if not waiting_for_second_click:
@@ -418,6 +427,21 @@ while beginFrame():
                         smallest_dist = tempDist
                 
             MODE = 0
+
+        elif event.type == pygame.MOUSEBUTTONDOWN and MODE == 5:
+            if not waiting_for_second_box_click:
+                waiting_for_second_box_click = True
+                first_click = event.pos
+            
+            else:
+                second_click = event.pos
+                waiting_for_second_box_click = False
+                
+                lines.append(Line(first_click, (first_click[0], second_click[1])))
+                lines.append(Line(first_click, (second_click[0], first_click[1])))
+                lines.append(Line((first_click[0], second_click[1]), second_click))
+                lines.append(Line((second_click[0], first_click[1]), second_click))
+                MODE = 0    
                    
         elif MODE == 4:
             if lines != []:
@@ -430,17 +454,16 @@ while beginFrame():
                     toAdd = [newCoords, r]
                     if toAdd not in circlesMM: 
                         circlesMM.append(toAdd)
-                    
-            print(linesMM)
-            print(circlesMM)
+                        
             
             with r12writer("test.dxf") as dxf:
                 dxf.units = units.MM
                 for line in linesMM:
-                    dxf.add_line(start = line[0], end = line[1], color = 3)
+                    dxf.add_line(start = line[0], end = line[1], color = 1)
         
                 for circle in circlesMM:
-                    dxf.add_circle(center = circle[0], radius = circle[1], color = 4)
+                    dxf.add_circle(center = circle[0], radius = circle[1], color = 3)
+                    
             
             print("Your file has been exported")
             
@@ -455,6 +478,12 @@ while beginFrame():
 
     if waiting_for_second_click:
         pygame.draw.line(canvas, "BLUE", first_click, current_mouse_pos, 2)
+
+    if waiting_for_second_box_click:
+        pygame.draw.line(canvas, "BLUE", first_click, (first_click[0], current_mouse_pos[1]), 2)
+        pygame.draw.line(canvas, "BLUE", first_click, (current_mouse_pos[0], first_click[1]), 2)
+        pygame.draw.line(canvas, "BLUE", (first_click[0], current_mouse_pos[1]), current_mouse_pos, 2)
+        pygame.draw.line(canvas, "BLUE", (current_mouse_pos[0], first_click[1]), current_mouse_pos, 2)
         
     if waiting_for_second_click_circle:
         current_rad = math.sqrt(math.pow(current_mouse_pos[0] - first_click[0], 2) + math.pow(current_mouse_pos[1] - first_click[1], 2))
