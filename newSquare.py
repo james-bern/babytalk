@@ -200,7 +200,70 @@ def snap(point):
     return point
 
 ########################################
+
+def is_point_in_polygon(point, polygon_points):
     
+    x, y = point
+    n = len(polygon_points)
+    inside = False
+    
+    # Get the last point
+    p1x, p1y = polygon_points[0]
+    
+    # Loop through all edges of the polygon
+    for i in range(n + 1):
+        # Get next point
+        p2x, p2y = polygon_points[i % n]
+        
+        # Check if point is within y-range of the edge
+        if min(p1y, p2y) < y <= max(p1y, p2y):
+            # Check if point is to the left of the edge
+            if x <= max(p1x, p2x):
+                # Calculate intersection of horizontal ray from point
+                if p1y != p2y:
+                    xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or x <= xinters:
+                        inside = not inside
+        
+        p1x, p1y = p2x, p2y
+    
+    return inside
+    
+########################################
+
+def get_parallel_lines(x1, y1, x2, y2, distance=25):
+   
+    # Calculate the direction vector of the original line
+    dx = x2 - x1
+    dy = y2 - y1
+    
+    # Calculate length of the line
+    length = math.sqrt(dx*dx + dy*dy)
+    
+    # Normalize the direction vector
+    if length != 0:
+        dx = dx/length
+        dy = dy/length
+    
+    # Calculate perpendicular vector (rotate 90 degrees)
+    # For rotation: x' = -y, y' = x
+    perpx = -dy
+    perpy = dx
+    
+    #first parallel line
+    line1_x1 = round(x1 + perpx * distance, 3)
+    line1_y1 = round(y1 + perpy * distance, 3)
+    line1_x2 = round(x2 + perpx * distance, 3)
+    line1_y2 = round(y2 + perpy * distance, 3)
+    
+    # second parallel line
+    line2_x1 = round(x1 - perpx * distance, 3)
+    line2_y1 = round(y1 - perpy * distance, 3)
+    line2_x2 = round(x2 - perpx * distance, 3)
+    line2_y2 = round(y2 - perpy * distance, 3)
+    
+    
+    return (line1_x1, line1_y1), (line1_x2, line1_y2), (line2_x1, line2_y1), (line2_x2, line2_y2)
 
 ########################################
 
@@ -287,7 +350,7 @@ while beginFrame():
     # eraser
     pygame.draw.rect(canvas, color = (234, 224, 153), rect = (150,10,60,60))
     eraserFont = pygame.font.Font(None, 25)
-    eraserObj = eraserFont.render('cancel', True, (30, 30, 30), None)
+    eraserObj = eraserFont.render('eraser', True, (30, 30, 30), None)
     canvas.blit(eraserObj, (154, 30))
 
     # box square
@@ -310,14 +373,23 @@ while beginFrame():
         if event.type == pygame.KEYDOWN:
             pass
         if event.type == pygame.MOUSEBUTTONDOWN and MODE == 0:
+            #line
             if current_mouse_pos[0] >= 10 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= 70 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN:
                 MODE = 1
+
+            #circle
             if current_mouse_pos[0] >= 80 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= 140 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN:
                 MODE = 2
+
+            #eraser
             if current_mouse_pos[0] >= 150 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= 210 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN:
                 MODE = 3
+
+            #end
             if current_mouse_pos[0] >= SCREEN_WIDTH - 70 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= SCREEN_WIDTH - 10 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN:
                 MODE = 4
+            
+            #box
             if current_mouse_pos[0] >= 220 and current_mouse_pos[1] <= 70 and current_mouse_pos[0] <= 280 and current_mouse_pos[1] >= 10 and event.type == pygame.MOUSEBUTTONDOWN: 
                 MODE = 5
                 
@@ -396,36 +468,20 @@ while beginFrame():
                 #    pass
 
         elif event.type == pygame.MOUSEBUTTONDOWN and MODE == 3:
-            erase_click_x, erase_click_y = event.pos
-            smallest_dist = SCREEN_WIDTH
-            lineObj = None
+            click = event.pos
+
             for line in lines:
-                x_1, y_1 = line.p1
-                x_2, y_2 = line.p2
+                p1_x, p1_y = line.p1
+                p2_x, p2_y = line.p2
+
+                p1_pos, p2_pos, p1_neg, p2_neg = get_parallel_lines(p1_x, p1_y, p2_x, p2_y)
+                points = [p1_pos, p2_pos, p2_neg, p1_neg]
                 
-                t = ((erase_click_x - x_1) * (x_2 - x_1)) + ((erase_click_y - y_1) * (y_2 - y_1)) / (((x_2 - x_1) ** 2) + ((y_2 - y_1)**2))
-            
-                if t < 0 and abs(x_1 - erase_click_x) <= 25 and abs(y_1 - erase_click_y) <= 25:
-                    tempDist = math.sqrt(((erase_click_x - x_1) ** 2) + ((erase_click_y - y_1)**2))
-                    if tempDist < smallest_dist:
-                        lineObj = line
-                        smallest_dist = tempDist
-                
-                elif t > 1 and abs(x_2 - erase_click_x) <= 25 and abs(y_2 - erase_click_y) <= 25:
-                    tempDist = math.sqrt(((erase_click_x - x_2) ** 2) + ((erase_click_y - y_2)**2))
-                    if tempDist < smallest_dist:
-                        lineObj = line
-                        smallest_dist = tempDist
-                
-                else:
-                    x_close = x_1 + (t * (x_2 - x_1))
-                    y_close = y_1 + (t * (y_2 - y_1))
-                    
-                    tempDist = math.sqrt(((erase_click_x - x_close) ** 2) + ((erase_click_y - y_close)**2))
-                    if tempDist < smallest_dist:
-                        lineObj = line
-                        smallest_dist = tempDist
-                
+                #rects.append(points)   
+
+                if is_point_in_polygon(click, points):
+                    lines.remove(line)
+
             MODE = 0
 
         elif event.type == pygame.MOUSEBUTTONDOWN and MODE == 5:
@@ -487,10 +543,10 @@ while beginFrame():
         
     if waiting_for_second_click_circle:
         current_rad = math.sqrt(math.pow(current_mouse_pos[0] - first_click[0], 2) + math.pow(current_mouse_pos[1] - first_click[1], 2))
-        pygame.draw.circle(canvas, "RED", first_click, current_rad, width=2)
+        pygame.draw.circle(canvas, "ORANGE", first_click, current_rad, width=2)
 
     for line in lines:
-        pygame.draw.line(canvas, "GREEN", (line.p1[0], line.p1[1]), (line.p2[0], line.p2[1]), 2)
+        pygame.draw.line(canvas, "RED", (line.p1[0], line.p1[1]), (line.p2[0], line.p2[1]), 2)
         
     for circle in circles:
         pygame.draw.circle(canvas, "GREEN", circle.p1, circle.r, width=2)
