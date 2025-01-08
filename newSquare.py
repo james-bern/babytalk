@@ -4,6 +4,7 @@ import sys
 import os
 import math
 import ezdxf
+import time
 from ezdxf import recover, units
 from ezdxf.addons import r12writer
 
@@ -18,6 +19,7 @@ wallWidth = 40
 
 ########################################
 
+snaps = []
 lines = []
 linesDict = {}
 circles = []
@@ -33,31 +35,24 @@ event_queue = None
 
 ########################################
 
-fidget = "fidgetBearing.dxf"
-lineTest = "lineTest.dxf"
-combo = "combo.dxf"
+# file_name = "fidgetBearing.dxf"
+# file_name = "lineTest.dxf"
+# file_name = "combo.dxf"
+#file_name = "colortest.dxf"
+file_name = "a.dxf"
+
 
 ########################################
 
 PPM = 3.7795275591
 
-def draw_line_entity(e):
-    start_x, start_y = e.dxf.start[0], e.dxf.start[1]
-    end_x, end_y = e.dxf.end[0], e.dxf.end[1]
-    # pygame.draw.line(canvas, "BLACK", (centerScreenX + PPM * start_x, centerScreenY - PPM * start_y), (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y))
-    lines.append(Line((centerScreenX + PPM * start_x , centerScreenY - PPM * start_y), (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y)))
-    
-def draw_circle_entity(e):
-    center_x, center_y = e.dxf.center[0], e.dxf.center[1]
-    radius = e.dxf.radius
-    # pygame.draw.circle(canvas, "BLACK", (centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), PPM * radius, width = 2)
-    circles.append(Circle((centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), radius * PPM))
-    
+
+
 ###DXF READER###########################
 
 def readDXF():
     try:
-        doc, auditor = recover.readfile(fidget)
+        doc, auditor = recover.readfile(file_name)
     except IOError:
         print(f"Not a DXF file or a generic I/O error.")
         sys.exit(1)
@@ -69,12 +64,18 @@ def readDXF():
     msp = doc.modelspace()
 
     for e in msp:
+        color = e.dxf.color
+        frozen = (color == 5)
         if e.dxftype() == "LINE":
-            draw_line_entity(e)
-        if e.dxftype() == "ARC":
-            draw_circle_entity(e)
-        
-    
+            start_x, start_y = e.dxf.start[0], e.dxf.start[1]
+            end_x, end_y = e.dxf.end[0], e.dxf.end[1]
+            lines.append(Line((centerScreenX + PPM * start_x , centerScreenY - PPM * start_y), (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y), frozen))
+        elif e.dxftype() == "CIRCLE":
+            center_x, center_y = e.dxf.center[0], e.dxf.center[1]
+            radius = e.dxf.radius
+            circles.append(Circle((centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), radius * PPM, frozen))        
+        else:
+            print("WARNING: UnrecognizedEntity - " + str(e))
 ########################################
 
 def grid():
@@ -116,6 +117,7 @@ def beginFrame():
     global event_queue
 
     pygame.display.update()
+
     clock.tick(60)  
     canvas.fill("WHITE")
 
@@ -125,30 +127,47 @@ def beginFrame():
             return False
         else:
             event_queue.append(event)
+
     return True
 
 
+
+
 ########################################
 
+# ENTITIES
+
+# color is an int 
+
 class Line:
-    def __init__(self, p1, p2):
+    def __init__(self, p1, p2, frozen):
         # World Coordinates
         self.p1 = p1
         self.p2 = p2
-        
-    def draw(self):
-        # Converts to Pixel Coordinates and Draws
-        pygame.draw.line(canvas, "BLACK",
-                        (PPM * self.p1[0], PPM * self.p1[1]),
-                        (PPM * self.p2[0], PPM * self.p2[1]))
+        self.frozen = frozen
+         
+    def draw(self): # TODO
+        # FORNOW
+        # TODO: if frozen, draw blue, else draw red
 
-########################################
+        color = "BLUE" if self.frozen else "RED"
+        pygame.draw.line(canvas, color, (self.p1[0], self.p1[1]), (self.p2[0], self.p2[1]), 2)
+
+        # TODO: Converts to Pixel Coordinates and Draws
+        # pygame.draw.line(canvas, "BLACK",
+        #                (PPM * self.p1[0], PPM * self.p1[1]),
+        #                (PPM * self.p2[0], PPM * self.p2[1]))
 
 class Circle:
-    def __init__(self, p1, r):
+    def __init__(self, p1, r, frozen):
         self.p1 = p1
         self.r = r
+        self.frozen = frozen
 
+    def draw(self): 
+        color = "BLUE" if self.frozen else "RED"
+        pygame.draw.circle(canvas, color, self.p1, self.r, width=2)
+    
 ########################################
 
 def anchorSquare(point):
@@ -308,10 +327,15 @@ def checkBearingCircle(point):
 # Line List needs to be in MM
 # 1 / PPM
 
+# NOTE: This clears the annoying "[IMKClient subclass]: chose IMKClient_Legacy" message on Mac
+if True:
+    pygame.event.get()
+    pygame.event.get()
+    os.system('clear')
+
 readDXF()
 
 while beginFrame():
-
     #######################################
     
     grid()
@@ -448,7 +472,7 @@ while beginFrame():
                         linesDict[second_click] = 1
                         
                         
-                lines.append(Line(first_click, second_click))
+                lines.append(Line(first_click, second_click, False))
                 MODE = 0
                 
         elif event.type == pygame.MOUSEBUTTONDOWN and MODE == 2:
@@ -459,7 +483,7 @@ while beginFrame():
                 second_click = event.pos
                 waiting_for_second_click_circle = False
                 rad = math.sqrt(math.pow(second_click[0] - first_click[0], 2) + math.pow(second_click[1] - first_click[1], 2))
-                circles.append(Circle(first_click, rad))
+                circles.append(Circle(first_click, rad, False))
                 MODE = 0    
 
                 #if mode == MODE_LINE:
@@ -471,6 +495,9 @@ while beginFrame():
             click = event.pos
 
             for line in lines:
+                if line.frozen:
+                    continue
+                
                 p1_x, p1_y = line.p1
                 p2_x, p2_y = line.p2
 
@@ -493,10 +520,10 @@ while beginFrame():
                 second_click = event.pos
                 waiting_for_second_box_click = False
                 
-                lines.append(Line(first_click, (first_click[0], second_click[1])))
-                lines.append(Line(first_click, (second_click[0], first_click[1])))
-                lines.append(Line((first_click[0], second_click[1]), second_click))
-                lines.append(Line((second_click[0], first_click[1]), second_click))
+                lines.append(Line(first_click, (first_click[0], second_click[1]), False))
+                lines.append(Line(first_click, (second_click[0], first_click[1]), False))
+                lines.append(Line((first_click[0], second_click[1]), second_click, False))
+                lines.append(Line((second_click[0], first_click[1]), second_click, False))
                 MODE = 0    
                    
         elif MODE == 4:
@@ -533,23 +560,24 @@ while beginFrame():
         drawC = pygame.draw.circle(canvas, color = "green", center = (SCREEN_WIDTH - 20, SCREEN_HEIGHT - 20), radius = 10)
 
     if waiting_for_second_click:
-        pygame.draw.line(canvas, "BLUE", first_click, current_mouse_pos, 2)
+        pygame.draw.line(canvas, "GREEN", first_click, current_mouse_pos, 2)
 
     if waiting_for_second_box_click:
-        pygame.draw.line(canvas, "BLUE", first_click, (first_click[0], current_mouse_pos[1]), 2)
-        pygame.draw.line(canvas, "BLUE", first_click, (current_mouse_pos[0], first_click[1]), 2)
-        pygame.draw.line(canvas, "BLUE", (first_click[0], current_mouse_pos[1]), current_mouse_pos, 2)
-        pygame.draw.line(canvas, "BLUE", (current_mouse_pos[0], first_click[1]), current_mouse_pos, 2)
+        pygame.draw.line(canvas, "GREEN", first_click, (first_click[0], current_mouse_pos[1]), 2)
+        pygame.draw.line(canvas, "GREEN", first_click, (current_mouse_pos[0], first_click[1]), 2)
+        pygame.draw.line(canvas, "GREEN", (first_click[0], current_mouse_pos[1]), current_mouse_pos, 2)
+        pygame.draw.line(canvas, "GREEN", (current_mouse_pos[0], first_click[1]), current_mouse_pos, 2)
         
     if waiting_for_second_click_circle:
         current_rad = math.sqrt(math.pow(current_mouse_pos[0] - first_click[0], 2) + math.pow(current_mouse_pos[1] - first_click[1], 2))
         pygame.draw.circle(canvas, "ORANGE", first_click, current_rad, width=2)
 
     for line in lines:
-        pygame.draw.line(canvas, "RED", (line.p1[0], line.p1[1]), (line.p2[0], line.p2[1]), 2)
-        
+        line.draw()
+
     for circle in circles:
-        pygame.draw.circle(canvas, "GREEN", circle.p1, circle.r, width=2)
+        circle.draw()
+
 
 
 
