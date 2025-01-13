@@ -26,7 +26,6 @@ lines = []
 linesDict = {}
 circles = []
 
-
 ########################################
 
 canvas = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT)) 
