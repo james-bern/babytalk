@@ -22,9 +22,12 @@ wallWidth = 40
 ########################################
 
 snaps = []
+forbidden_regions = []
 lines = []
 linesDict = {}
 circles = []
+
+connected_constraint = False
 
 ########################################
 
@@ -96,8 +99,12 @@ def readDXF():
         elif e.dxftype() == "CIRCLE":
             center_x, center_y = e.dxf.center[0], e.dxf.center[1]
             radius = e.dxf.radius
-            if color == 6:  
+            if color == 6: 
                 snaps.append(Snap((centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), True))
+            elif color == 2:
+                forbidden_regions.append(Forbidden((centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), radius * PPM, True))
+            elif color == 4:
+                connected_constraint = True
             else:
                 circles.append(Circle((centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), radius * PPM, frozen))        
         else:
@@ -190,10 +197,28 @@ class Snap:
     def draw(self):
         pygame.draw.circle(canvas, "Purple", self.p1, radius = 3)
 
+class Forbidden:
+    def __init__(self, p1, r, frozen):
+        self.p1 = p1
+        self.r = r
+        self.frozen = frozen
+
+    def draw(self):
+        pygame.draw.circle(canvas, (255, 213, 128), self.p1, self.r)
+
     
 ########################################
 
-
+def is_point_forbidden(point):
+    (p1, p2) = point
+    for zone in forbidden_regions:
+        (c1, c2) = zone.p1
+        radius = zone.r
+        d = math.sqrt((((c1 - p1)**2) + ((c2 - p2)**2)))
+        if d < radius: 
+            return True
+    
+    return False
 
 ########################################
 
@@ -293,16 +318,22 @@ def checkComplete():
 ########################################
 
 def addToDict(line):
+    numIn = 0
     if lines != []:
-        click = snapTo(line)
-        if click in linesDict:
-            linesDict[click] += 1
-        else:
-            linesDict[click] = 1
-    else:
-        linesDict[click] = 1
-
-    return click 
+        if line.p1 in linesDict:
+            linesDict[line.p1] += 1
+            numIn = numIn + 1
+        elif line.p2 in linesDict:
+            linesDict[line.p2] += 1
+            numIn = numIn + 2
+    
+    if numIn == 0:
+        linesDict[line.p1] = 1
+        linesDict[line.p2] = 1
+    elif numIn == 1:
+        linesDict[line.p2] = 1
+    elif numIn == 2:
+        linesDict[line.p1] = 1 
 
 ########################################
 
@@ -380,7 +411,7 @@ while beginFrame():
         already_drew_gui_this_frame = True
 
         if event == None:
-             pass
+            pass
         elif event.type == pygame.KEYDOWN:
             pass
         elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -390,24 +421,45 @@ while beginFrame():
                 if not waiting_for_second_click:
                     waiting_for_second_click = True
                     first_click = event.pos
-                    first_click = addToDict(first_click)
+                    
+                    if is_point_forbidden(first_click):
+                        waiting_for_second_click = False
+                        print('Cannot draw in forbidden zone')
+                    else:
+                        first_click = snapTo(first_click)
+            
                 else: 
                     second_click = event.pos
                     waiting_for_second_click = False
-                    second_click = addToDict(second_click)
-                    lines.append(Line(first_click, second_click, False))
-                    mode = MODE_NONE
+                    if is_point_forbidden(second_click):
+                        waiting_for_second_click = True
+                        print('Cannot draw in forbidden zone')
+                    else:
+                        second_click = snapTo(second_click)
+                        line = Line(first_click, second_click, False)
+                        lines.append(line)
+                        addToDict(line)
+                        mode = MODE_NONE
 
             elif mode == MODE_CIRCLE:
                 if not waiting_for_second_click_circle:
                     waiting_for_second_click_circle = True
                     first_click = event.pos
+
+                    if is_point_forbidden(first_click):
+                        waiting_for_second_click_circle = False
+                        print('Cannot draw in forbidden zone')
+
                 else:
                     second_click = event.pos
                     waiting_for_second_click_circle = False
-                    rad = math.sqrt(math.pow(second_click[0] - first_click[0], 2) + math.pow(second_click[1] - first_click[1], 2))
-                    circles.append(Circle(first_click, rad, False))
-                    mode = MODE_NONE 
+                    if is_point_forbidden(second_click):
+                        waiting_for_second_click_circle = True
+                        print('Cannot draw in forbidden zone')
+                    else:  
+                        rad = math.sqrt(math.pow(second_click[0] - first_click[0], 2) + math.pow(second_click[1] - first_click[1], 2))
+                        circles.append(Circle(first_click, rad, False))
+                        mode = MODE_NONE 
 
             elif mode == MODE_ERASER:
                 click = event.pos
@@ -431,16 +483,31 @@ while beginFrame():
                 if not waiting_for_second_box_click:
                     waiting_for_second_box_click = True
                     first_click = event.pos
+                    if is_point_forbidden(first_click):
+                        waiting_for_second_box_click = False
+                        print('Cannot draw in forbidden zone')
                 else:
                     second_click = event.pos
                     waiting_for_second_box_click = False
-                    
-                    lines.append(Line(first_click, (first_click[0], second_click[1]), False))
-                    lines.append(Line(first_click, (second_click[0], first_click[1]), False))
-                    lines.append(Line((first_click[0], second_click[1]), second_click, False))
-                    lines.append(Line((second_click[0], first_click[1]), second_click, False))
+                    if is_point_forbidden(second_click):
+                        waiting_for_second_box_click = True
+                        print('Cannot draw in forbidden zone')
+                    else:
+                        l1 = Line(first_click, (first_click[0], second_click[1]), False)
+                        l2 = Line(first_click, (second_click[0], first_click[1]), False)
+                        l3 = Line((first_click[0], second_click[1]), second_click, False)
+                        l4 = Line((second_click[0], first_click[1]), second_click, False)
+                        lines.append(l1)
+                        lines.append(l2)
+                        lines.append(l3)
+                        lines.append(l4)
+                        
+                        addToDict(l1)
+                        addToDict(l2)
+                        addToDict(l3)
+                        addToDict(l4)
 
-                    mode = MODE_NONE    
+                        mode = MODE_NONE    
                            
     # DRAW #################################
     
@@ -462,6 +529,9 @@ while beginFrame():
         current_rad = math.sqrt(math.pow(current_mouse_pos[0] - first_click[0], 2) + math.pow(current_mouse_pos[1] - first_click[1], 2))
         pygame.draw.circle(canvas, "ORANGE", first_click, current_rad, width=2)
 
+    for zone in forbidden_regions:
+        zone.draw()
+        
     for line in lines:
         line.draw()
 
@@ -470,6 +540,8 @@ while beginFrame():
 
     for snap in snaps:
         snap.draw()
+
+    
 
 
 
