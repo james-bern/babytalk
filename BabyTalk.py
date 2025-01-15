@@ -37,12 +37,12 @@ event_queue = None
 
 ########################################
 
-# file_name = "fidgetBearing.dxf"
+file_name = "fidgetBearing.dxf"
 # file_name = "lineTest.dxf"
 # file_name = "combo.dxf"
 # file_name = "colortest.dxf"
 # file_name = "a.dxf"
-file_name = "b.dxf"
+# file_name = "b.dxf"
 
 
 ########################################
@@ -95,6 +95,7 @@ def readDXF():
             start_x, start_y = e.dxf.start[0], e.dxf.start[1]
             end_x, end_y = e.dxf.end[0], e.dxf.end[1]
             lines.append(Line((centerScreenX + PPM * start_x , centerScreenY - PPM * start_y), (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y), frozen))
+            addToDict(Line((centerScreenX + PPM * start_x , centerScreenY - PPM * start_y), (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y), frozen))
 
         elif e.dxftype() == "CIRCLE":
             center_x, center_y = e.dxf.center[0], e.dxf.center[1]
@@ -306,6 +307,7 @@ first_click = None
 completeCircle = False
 
 ########################################
+'''
 
 def checkComplete():
     count = 0 
@@ -316,6 +318,7 @@ def checkComplete():
     return count
 
 ########################################
+
 
 def addToDict(line):
     numIn = 0
@@ -334,6 +337,29 @@ def addToDict(line):
         linesDict[line.p2] = 1
     elif numIn == 2:
         linesDict[line.p1] = 1 
+
+'''
+
+def isConnected():
+    endpointDict = {}
+
+    for line in lines:
+        if line.p1 not in endpointDict.keys():
+            endpointDict[line.p1] = 1
+        else:
+            endpointDict[line.p1] += 1
+        
+        if line.p2 not in endpointDict.keys():
+            endpointDict[line.p2] = 1
+        else:
+            endpointDict[line.p2] += 1
+
+    for value in endpointDict.values():
+        if value == 2:
+            return False
+            
+    return True
+
 
 ########################################
 
@@ -438,7 +464,6 @@ while beginFrame():
                         second_click = snapTo(second_click)
                         line = Line(first_click, second_click, False)
                         lines.append(line)
-                        addToDict(line)
                         mode = MODE_NONE
 
             elif mode == MODE_CIRCLE:
@@ -501,19 +526,16 @@ while beginFrame():
                         lines.append(l2)
                         lines.append(l3)
                         lines.append(l4)
-                        
-                        addToDict(l1)
-                        addToDict(l2)
-                        addToDict(l3)
-                        addToDict(l4)
 
                         mode = MODE_NONE    
-                           
+        
+            print(isConnected())
+
     # DRAW #################################
     
-    if checkComplete() != 0:
+    if not isConnected():
         drawC = pygame.draw.circle(canvas, color = "red", center = (SCREEN_WIDTH - 20, SCREEN_HEIGHT - 20), radius = 10)
-    elif checkComplete() == 0:
+    elif isConnected():
         drawC = pygame.draw.circle(canvas, color = "green", center = (SCREEN_WIDTH - 20, SCREEN_HEIGHT - 20), radius = 10)
 
     if waiting_for_second_click:
