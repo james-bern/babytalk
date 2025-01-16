@@ -1,5 +1,5 @@
-# TODO: Snaps (purple circles)
-
+# TODO Fidger Spinner
+# TODO Find another worksheet – Box + Lid?
 
 import pygame
 import sys
@@ -9,6 +9,10 @@ import ezdxf
 import time
 from ezdxf import recover, units
 from ezdxf.addons import r12writer
+import pygame_widgets
+from pygame_widgets.button import Button
+
+
 
 pygame.init()
 os.system('clear')
@@ -18,6 +22,7 @@ SCREEN_HEIGHT = 750
 (centerScreenX, centerScreenY) = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
 boxWidth = 200
 wallWidth = 40
+
 
 ########################################
 
@@ -37,12 +42,13 @@ event_queue = None
 
 ########################################
 
-file_name = "fidgetBearing.dxf"
+# file_name = "fidgetBearing.dxf"
 # file_name = "lineTest.dxf"
 # file_name = "combo.dxf"
 # file_name = "colortest.dxf"
 # file_name = "a.dxf"
-# file_name = "b.dxf"
+file_name = "b.dxf"
+# file_name = "fidgetWorksheet.dxf"
 
 
 ########################################
@@ -63,7 +69,7 @@ def close_and_save():
             circlesMM.append(toAdd)
                 
     
-    with r12writer("test.dxf") as dxf:
+    with r12writer("creation.dxf") as dxf:
         dxf.units = units.MM
         for line in linesMM:
             dxf.add_line(start = line[0], end = line[1], color = 1)
@@ -92,10 +98,12 @@ def readDXF():
         color = e.dxf.color
         frozen = (color == 5)
         if e.dxftype() == "LINE":
-            start_x, start_y = e.dxf.start[0], e.dxf.start[1]
-            end_x, end_y = e.dxf.end[0], e.dxf.end[1]
-            lines.append(Line((centerScreenX + PPM * start_x , centerScreenY - PPM * start_y), (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y), frozen))
-            addToDict(Line((centerScreenX + PPM * start_x , centerScreenY - PPM * start_y), (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y), frozen))
+            if color == 4:
+                pass
+            else:
+                start_x, start_y = e.dxf.start[0], e.dxf.start[1]
+                end_x, end_y = e.dxf.end[0], e.dxf.end[1]
+                lines.append(Line((centerScreenX + PPM * start_x , centerScreenY - PPM * start_y), (centerScreenX + PPM * end_x, centerScreenY - PPM * end_y), frozen))
 
         elif e.dxftype() == "CIRCLE":
             center_x, center_y = e.dxf.center[0], e.dxf.center[1]
@@ -223,21 +231,24 @@ def is_point_forbidden(point):
 
 ########################################
 
-def snapTo(point):
+def snapTo(point, shape):
     (p1, p2) = point
-    for line in lines:
-        if abs(p1 - line.p1[0]) <= 25 and abs(p2 - line.p1[1]) <= 25:   
-            return (line.p1[0], line.p1[1])
-        elif abs(p1 - line.p2[0]) <= 25 and abs(p2 - line.p2[1]) <= 25:   
-            return (line.p2[0], line.p2[1])
+    if shape == "Line":
+        for line in lines:
+            if abs(p1 - line.p1[0]) <= 25 and abs(p2 - line.p1[1]) <= 25:   
+                return (line.p1[0], line.p1[1])
+            elif abs(p1 - line.p2[0]) <= 25 and abs(p2 - line.p2[1]) <= 25:   
+                return (line.p2[0], line.p2[1])
         
     for snap in snaps:
         if abs(p1 - snap.p1[0]) <= 25 and abs(p2 - snap.p1[1]) <= 25:
             return (snap.p1[0], snap.p1[1])
     return point
 
-########################################
 
+
+########################################
+'''
 def is_point_in_polygon(point, polygon_points):
     
     x, y = point
@@ -290,6 +301,35 @@ def get_parallel_lines(x1, y1, x2, y2, distance=25):
     
     return (line1_x1, line1_y1), (line1_x2, line1_y2), (line2_x1, line2_y1), (line2_x2, line2_y2)
 
+'''
+########################################
+
+def eraseCircle(circle, point):
+    c_x, c_y = circle.p1
+    p_x, p_y = point
+
+    d = abs(math.sqrt((p_x - c_x)**2 + (p_y - c_y)**2) - circle.r)
+
+    if d < 25 :
+        return True
+    
+    return False
+
+def eraseLine(lineA, lineB, point):
+    x_a, y_a = lineA
+    x_b, y_b = lineB
+    p_1, p_2 = point
+
+    top = abs(((x_b - x_a) * (p_2 - y_a)) - ((y_b - y_a) * (p_1 - x_a)))
+    bottom = math.sqrt((x_b - x_a)**2 + (y_b -y_a)**2)
+
+    d = top / bottom
+
+    if d < 25:
+        return True
+    
+    return False
+
 ########################################
 
 MODE_NONE   = 0
@@ -305,6 +345,35 @@ waiting_for_second_click_circle = False
 waiting_for_second_box_click = False
 first_click = None
 completeCircle = False
+
+########################################
+'''
+def modeSet(num):
+    global mode
+    if num == 1:
+        mode = MODE_BOX
+
+#######BUTTONS##########################
+
+boxButton = Button(
+    canvas,  # Surface to place button on
+    10,  # X-coordinate of top left corner
+    10,  # Y-coordinate of top left corner
+    60,  # Width
+    60,  # Height
+
+    # Optional Parameters
+    text = 'Box',  # Text to display
+    fontSize = 20,  # Size of font
+    margin = 4,  # Minimum distance between text/image and edge of button
+    inactiveColour = (200, 50, 0),  # Colour of button when not being interacted with
+    hoverColour = (150, 0, 0),  # Colour of button when being hovered over
+    pressedColour=(0, 200, 20),  # Colour of button when being clicked
+    radius = 10,  # Radius of border corners (leave empty for not curved)
+    onClick = lambda: modeSet(1)  # Function to call when clicked on
+)
+
+'''
 
 ########################################
 '''
@@ -340,6 +409,8 @@ def addToDict(line):
 
 '''
 
+########################################
+
 def isConnected():
     endpointDict = {}
 
@@ -355,7 +426,7 @@ def isConnected():
             endpointDict[line.p2] += 1
 
     for value in endpointDict.values():
-        if value == 2:
+        if value != 2:
             return False
             
     return True
@@ -389,6 +460,7 @@ while beginFrame():
     # imgui api
     already_drew_gui_this_frame = False
     mouse_eaten_by_button = False
+
     def BUTTON(event, name, color):
         global _button_x
         global current_mouse_pos
@@ -416,14 +488,16 @@ while beginFrame():
         if result:
             mouse_eaten_by_button = True
         return result
-
-
+    
     if (len(event_queue) == 0):
         event_queue.append(None)
     for event in event_queue:
 
         mouse_eaten_by_button = False
         _button_x = 10
+
+        #pygame_widgets.update(event)
+        
         if (BUTTON(event, "box", (129, 235, 125))): 
             mode = MODE_BOX 
         if (BUTTON(event, "circle", (129, 235, 125))): 
@@ -434,6 +508,8 @@ while beginFrame():
             mode = MODE_LINE 
         if (BUTTON(event, "end", (255, 0, 0))): 
             close_and_save()
+
+
         already_drew_gui_this_frame = True
 
         if event == None:
@@ -452,7 +528,7 @@ while beginFrame():
                         waiting_for_second_click = False
                         print('Cannot draw in forbidden zone')
                     else:
-                        first_click = snapTo(first_click)
+                        first_click = snapTo(first_click, "Line")
             
                 else: 
                     second_click = event.pos
@@ -461,7 +537,7 @@ while beginFrame():
                         waiting_for_second_click = True
                         print('Cannot draw in forbidden zone')
                     else:
-                        second_click = snapTo(second_click)
+                        second_click = snapTo(second_click, "Line")
                         line = Line(first_click, second_click, False)
                         lines.append(line)
                         mode = MODE_NONE
@@ -474,6 +550,8 @@ while beginFrame():
                     if is_point_forbidden(first_click):
                         waiting_for_second_click_circle = False
                         print('Cannot draw in forbidden zone')
+                    else:
+                        first_click = snapTo(first_click, "Circle")
 
                 else:
                     second_click = event.pos
@@ -493,6 +571,7 @@ while beginFrame():
                     if line.frozen:
                         continue
                     
+                    '''
                     p1_x, p1_y = line.p1
                     p2_x, p2_y = line.p2
 
@@ -501,6 +580,23 @@ while beginFrame():
                     
                     if is_point_in_polygon(click, points):
                         lines.remove(line)
+                    '''
+
+                    toErase = eraseLine(line.p1, line.p2, click)
+
+                    if toErase:
+                        lines.remove(line)
+
+                
+                for circle in circles:
+
+                    if circle.frozen:
+                        continue
+
+                    toErase = eraseCircle(circle, click)
+                    if toErase:
+                        circles.remove(circle)
+
 
                 mode = MODE_NONE
 
@@ -529,8 +625,6 @@ while beginFrame():
 
                         mode = MODE_NONE    
         
-            print(isConnected())
-
     # DRAW #################################
     
     if not isConnected():
