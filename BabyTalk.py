@@ -1,5 +1,7 @@
 # TODO Fidger Spinner
 # TODO Find another worksheet – Box + Lid?
+# TODO 3.4, 3.0, 2.6 (>, =, <)
+# TODO maybe box sizes
 
 import pygame
 import sys
@@ -47,9 +49,9 @@ event_queue = None
 # file_name = "combo.dxf"
 # file_name = "colortest.dxf"
 # file_name = "a.dxf"
-file_name = "b.dxf"
+# file_name = "b.dxf"
 # file_name = "fidgetWorksheet.dxf"
-
+file_name = "boxWorksheet.dxf"
 
 ########################################
 
@@ -433,6 +435,59 @@ def isConnected():
 
 
 ########################################
+designatedRadius = 0.0
+designatedRadiusNeeded = False
+
+def helperDesignatedRadius(size):
+    designatedRadius = size
+    designatedRadiusNeeded = True
+    print("Updated")
+
+def isDesignatedSize(event):
+
+    # slip fit
+    slipButton = Button(
+        canvas,  # Surface to place button on
+        10,  # X-coordinate of top left corner
+        80,  # Y-coordinate of top left corner
+        60,  # Width
+        60,  # Height
+
+    # Optional Parameters
+    text = 'Slip Fit',  # Text to display
+    fontSize = 20,  # Size of font
+    margin = 20,  # Minimum distance between text/image and edge of button
+    inactiveColour=(200, 50, 0),  # Colour of button when not being interacted with
+    hoverColour=(150, 0, 0),  # Colour of button when being hovered over
+    pressedColour=(0, 200, 20),  # Colour of button when being clicked
+    onClick=lambda: helperDesignatedRadius(10.0)  # Function to call when clicked on
+    )
+    # press fit
+
+    pressFit = Button(
+        canvas,  # Surface to place button on
+        80,  # X-coordinate of top left corner
+        80,  # Y-coordinate of top left corner
+        60,  # Width
+        60,  # Height
+
+    # Optional Parameters
+    text = 'Press Fit',  # Text to display
+    fontSize = 20,  # Size of font
+    margin = 20,  # Minimum distance between text/image and edge of button
+    inactiveColour=(200, 50, 0),  # Colour of button when not being interacted with
+    hoverColour=(150, 0, 0),  # Colour of button when being hovered over
+    pressedColour=(0, 200, 20),  # Colour of button when being clicked
+    onClick = lambda: helperDesignatedRadius(8.0)  # Function to call when clicked on
+    )
+ 
+    
+
+
+
+
+
+########################################
 
 
 # TODO
@@ -555,10 +610,17 @@ while beginFrame():
 
                 else:
                     second_click = event.pos
+                    isDesignatedSize(event)
+                   
                     waiting_for_second_click_circle = False
                     if is_point_forbidden(second_click):
                         waiting_for_second_click_circle = True
                         print('Cannot draw in forbidden zone')
+                    
+                    elif designatedRadiusNeeded:
+                        circles.append(Circle(first_click, designatedRadius, False))
+                        mode = MODE_NONE
+
                     else:  
                         rad = math.sqrt(math.pow(second_click[0] - first_click[0], 2) + math.pow(second_click[1] - first_click[1], 2))
                         circles.append(Circle(first_click, rad, False))
