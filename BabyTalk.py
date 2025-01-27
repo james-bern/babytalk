@@ -51,8 +51,8 @@ event_queue = None
 # file_name = "colortest.dxf"
 # file_name = "a.dxf"
 # file_name = "b.dxf"
-file_name = "fidgetWorksheet.dxf"
-# file_name = "boxWorksheet.dxf"
+# file_name = "fidgetWorksheet.dxf"
+file_name = "boxWorksheet.dxf"
 
 ########################################
 
@@ -325,7 +325,7 @@ def eraseCircle(circle, point):
 
     d = abs(math.sqrt((p_x - c_x)**2 + (p_y - c_y)**2) - circle.r)
 
-    if d < 25 :
+    if d < 20 :
         return True
     
     return False
@@ -340,7 +340,7 @@ def eraseLine(lineA, lineB, point):
 
     d = top / bottom
 
-    if d < 25:
+    if d < 20:
         return True
     
     return False
@@ -459,17 +459,20 @@ def helperDesignatedRadius(click, size):
     first_click = None
     mode = MODE_NONE
 
+    pressFit.hide()
+    slipButton.hide()
+
 
 # slip fit
 slipButton = Button(
     canvas,  # Surface to place button on
     10,  # X-coordinate of top left corner
     80,  # Y-coordinate of top left corner
-    60,  # Width
-    60,  # Height
+    40,  # Width
+    40,  # Height
 
 # Optional Parameters
-text = 'Slip Fit',  # Text to display
+text = 'Slip',  # Text to display
 fontSize = 15,  # Size of font
 margin = 20,  # Minimum distance between text/image and edge of button
 inactiveColour = (200, 50, 0),  # Colour of button when not being interacted with
@@ -483,12 +486,12 @@ pressFit = Button(
     canvas,  # Surface to place button on
     80,  # X-coordinate of top left corner
     80,  # Y-coordinate of top left corner
-    60,  # Width
-    60,  # Height
+    40,  # Width
+    40,  # Height
 
 # Optional Parameters
-text = 'Press Fit',  # Text to display
-fontSize = 15,  # Size of font
+text = 'Press',  # Text to display
+fontSize = 13,  # Size of font
 margin = 20,  # Minimum distance between text/image and edge of button
 inactiveColour=(200, 50, 0),  # Colour of button when not being interacted with
 hoverColour=(150, 0, 0),  # Colour of button when being hovered over
@@ -624,7 +627,11 @@ while beginFrame():
                     else:
                         first_click = snapTo(first_click, "Circle")  
 
-                     
+                    slipButton.setX(first_click[0] + 20)
+                    slipButton.setY(first_click[1] - 50)
+
+                    pressFit.setX(first_click[0] + 20)
+                    pressFit.setY(first_click[1])
 
                 else:
                     second_click = event.pos
@@ -674,6 +681,7 @@ while beginFrame():
                         continue
 
                     toErase = eraseCircle(circle, click)
+
                     if toErase:
                         circles.remove(circle)
 
@@ -687,6 +695,10 @@ while beginFrame():
                     if is_point_forbidden(first_click):
                         waiting_for_second_box_click = False
                         print('Cannot draw in forbidden zone')
+                    
+                    else:
+                        first_click = snapTo(first_click, "Line")  
+
                 else:
                     second_click = event.pos
                     waiting_for_second_box_click = False
@@ -694,6 +706,7 @@ while beginFrame():
                         waiting_for_second_box_click = True
                         print('Cannot draw in forbidden zone')
                     else:
+                        second_click = snapTo(second_click, "Line")  
                         l1 = Line(first_click, (first_click[0], second_click[1]), False)
                         l2 = Line(first_click, (second_click[0], first_click[1]), False)
                         l3 = Line((first_click[0], second_click[1]), second_click, False)
