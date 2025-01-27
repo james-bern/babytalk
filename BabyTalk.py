@@ -2,6 +2,7 @@
 # TODO Find another worksheet – Box + Lid?
 # TODO 3.4, 3.0, 2.6 (>, =, <)
 # TODO maybe box sizes
+# TODO seperate pane for buttons, forbidden zone (mouse press events don't actually get processed by us if y > ??)
 
 import pygame
 import sys
@@ -50,8 +51,8 @@ event_queue = None
 # file_name = "colortest.dxf"
 # file_name = "a.dxf"
 # file_name = "b.dxf"
-# file_name = "fidgetWorksheet.dxf"
-file_name = "boxWorksheet.dxf"
+file_name = "fidgetWorksheet.dxf"
+# file_name = "boxWorksheet.dxf"
 
 ########################################
 
@@ -154,10 +155,22 @@ def beginFrame():
     pygame.display.update()
 
     clock.tick(60)  
+
     canvas.fill("WHITE")
+    # draw grid
+    blockSize = 25
+    for x in range(0, SCREEN_WIDTH, blockSize):
+        for y in range(0, SCREEN_HEIGHT, blockSize):
+            rectGrid = pygame.Rect(x, y, blockSize, blockSize)
+            pygame.draw.rect(canvas, color = (240,240,240), rect = rectGrid, width = 1)
 
     event_queue = []
-    for event in pygame.event.get(): 
+
+    events = pygame.event.get()
+
+    pygame_widgets.update(events)
+
+    for event in events: 
         if event.type == pygame.QUIT: 
             return False
         else:
@@ -435,57 +448,58 @@ def isConnected():
 
 
 ########################################
-designatedRadius = 0.0
-designatedRadiusNeeded = False
-
-def helperDesignatedRadius(size):
-    designatedRadius = size
-    designatedRadiusNeeded = True
-    print("Updated")
-
-def isDesignatedSize(event):
-
-    # slip fit
-    slipButton = Button(
-        canvas,  # Surface to place button on
-        10,  # X-coordinate of top left corner
-        80,  # Y-coordinate of top left corner
-        60,  # Width
-        60,  # Height
-
-    # Optional Parameters
-    text = 'Slip Fit',  # Text to display
-    fontSize = 20,  # Size of font
-    margin = 20,  # Minimum distance between text/image and edge of button
-    inactiveColour=(200, 50, 0),  # Colour of button when not being interacted with
-    hoverColour=(150, 0, 0),  # Colour of button when being hovered over
-    pressedColour=(0, 200, 20),  # Colour of button when being clicked
-    onClick=lambda: helperDesignatedRadius(10.0)  # Function to call when clicked on
-    )
-    # press fit
-
-    pressFit = Button(
-        canvas,  # Surface to place button on
-        80,  # X-coordinate of top left corner
-        80,  # Y-coordinate of top left corner
-        60,  # Width
-        60,  # Height
-
-    # Optional Parameters
-    text = 'Press Fit',  # Text to display
-    fontSize = 20,  # Size of font
-    margin = 20,  # Minimum distance between text/image and edge of button
-    inactiveColour=(200, 50, 0),  # Colour of button when not being interacted with
-    hoverColour=(150, 0, 0),  # Colour of button when being hovered over
-    pressedColour=(0, 200, 20),  # Colour of button when being clicked
-    onClick = lambda: helperDesignatedRadius(8.0)  # Function to call when clicked on
-    )
- 
     
 
+def helperDesignatedRadius(click, size):
+    global waiting_for_second_click_circle
+    global first_click
+    global mode
+    circles.append(Circle(click, size, False))
+    waiting_for_second_click_circle = False
+    first_click = None
+    mode = MODE_NONE
 
 
+# slip fit
+slipButton = Button(
+    canvas,  # Surface to place button on
+    10,  # X-coordinate of top left corner
+    80,  # Y-coordinate of top left corner
+    60,  # Width
+    60,  # Height
 
+# Optional Parameters
+text = 'Slip Fit',  # Text to display
+fontSize = 15,  # Size of font
+margin = 20,  # Minimum distance between text/image and edge of button
+inactiveColour = (200, 50, 0),  # Colour of button when not being interacted with
+hoverColour = (150, 0, 0),  # Colour of button when being hovered over
+pressedColour = (0, 200, 20),  # Colour of button when being clicked
+onClick=lambda: helperDesignatedRadius(first_click, 10.0)  # Function to call when clicked on
+)
+# press fit
+
+pressFit = Button(
+    canvas,  # Surface to place button on
+    80,  # X-coordinate of top left corner
+    80,  # Y-coordinate of top left corner
+    60,  # Width
+    60,  # Height
+
+# Optional Parameters
+text = 'Press Fit',  # Text to display
+fontSize = 15,  # Size of font
+margin = 20,  # Minimum distance between text/image and edge of button
+inactiveColour=(200, 50, 0),  # Colour of button when not being interacted with
+hoverColour=(150, 0, 0),  # Colour of button when being hovered over
+pressedColour=(0, 200, 20),  # Colour of button when being clicked
+onClick = lambda: helperDesignatedRadius(first_click, 8.0)  # Function to call when clicked on
+)
+ 
+
+# NOTE (Jim): this is how to hide/show widgets
+# pressFit.hide()
+# pressFit.show()
 
 ########################################
 
@@ -502,16 +516,12 @@ if True:
 
 readDXF()
 
+pressFit.hide()
+slipButton.hide()
+
 while beginFrame():
     current_mouse_pos = pygame.mouse.get_pos()
-    
-    # draw grid
-    blockSize = 25
-    for x in range(0, SCREEN_WIDTH, blockSize):
-        for y in range(0, SCREEN_HEIGHT, blockSize):
-            rectGrid = pygame.Rect(x, y, blockSize, blockSize)
-            pygame.draw.rect(canvas, color = "light grey", rect = rectGrid, width = 1)
-    
+
     # imgui api
     already_drew_gui_this_frame = False
     mouse_eaten_by_button = False
@@ -573,7 +583,9 @@ while beginFrame():
             pass
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if mouse_eaten_by_button:
-                pass 
+                pass
+            elif event.pos[1] < 160:
+                pass
             elif mode == MODE_LINE:
                 if not waiting_for_second_click:
                     waiting_for_second_click = True
@@ -598,6 +610,10 @@ while beginFrame():
                         mode = MODE_NONE
 
             elif mode == MODE_CIRCLE:
+                
+                slipButton.show()
+                pressFit.show()
+
                 if not waiting_for_second_click_circle:
                     waiting_for_second_click_circle = True
                     first_click = event.pos
@@ -606,25 +622,27 @@ while beginFrame():
                         waiting_for_second_click_circle = False
                         print('Cannot draw in forbidden zone')
                     else:
-                        first_click = snapTo(first_click, "Circle")
+                        first_click = snapTo(first_click, "Circle")  
+
+                     
 
                 else:
                     second_click = event.pos
-                    isDesignatedSize(event)
                    
                     waiting_for_second_click_circle = False
+                    
                     if is_point_forbidden(second_click):
                         waiting_for_second_click_circle = True
-                        print('Cannot draw in forbidden zone')
-                    
-                    elif designatedRadiusNeeded:
-                        circles.append(Circle(first_click, designatedRadius, False))
-                        mode = MODE_NONE
+                        print('Cannot draw in forbidden zone')          
 
                     else:  
                         rad = math.sqrt(math.pow(second_click[0] - first_click[0], 2) + math.pow(second_click[1] - first_click[1], 2))
                         circles.append(Circle(first_click, rad, False))
                         mode = MODE_NONE 
+
+                    pressFit.hide()
+                    slipButton.hide()
+                
 
             elif mode == MODE_ERASER:
                 click = event.pos
