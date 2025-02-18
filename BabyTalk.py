@@ -14,6 +14,7 @@ from ezdxf import recover, units
 from ezdxf.addons import r12writer
 import pygame_widgets
 from pygame_widgets.button import Button
+from pygame_widgets.dropdown import Dropdown
 
 
 
@@ -52,7 +53,8 @@ event_queue = None
 # file_name = "a.dxf"
 # file_name = "b.dxf"
 # file_name = "fidgetWorksheet.dxf"
-file_name = "boxWorksheet.dxf"
+# file_name = "boxWorksheet.dxf"
+file_name = "presentation.dxf"
 
 ########################################
 
@@ -361,68 +363,11 @@ waiting_for_second_box_click = False
 first_click = None
 completeCircle = False
 
-########################################
-'''
-def modeSet(num):
-    global mode
-    if num == 1:
-        mode = MODE_BOX
-
-#######BUTTONS##########################
-
-boxButton = Button(
-    canvas,  # Surface to place button on
-    10,  # X-coordinate of top left corner
-    10,  # Y-coordinate of top left corner
-    60,  # Width
-    60,  # Height
-
-    # Optional Parameters
-    text = 'Box',  # Text to display
-    fontSize = 20,  # Size of font
-    margin = 4,  # Minimum distance between text/image and edge of button
-    inactiveColour = (200, 50, 0),  # Colour of button when not being interacted with
-    hoverColour = (150, 0, 0),  # Colour of button when being hovered over
-    pressedColour=(0, 200, 20),  # Colour of button when being clicked
-    radius = 10,  # Radius of border corners (leave empty for not curved)
-    onClick = lambda: modeSet(1)  # Function to call when clicked on
-)
-
-'''
+lengthNeeded = False
+waiting_for_second_click_length = False
+length = None
 
 ########################################
-'''
-
-def checkComplete():
-    count = 0 
-    for value in linesDict.values():
-        if value <= 1:
-            count += 1
-            
-    return count
-
-########################################
-
-
-def addToDict(line):
-    numIn = 0
-    if lines != []:
-        if line.p1 in linesDict:
-            linesDict[line.p1] += 1
-            numIn = numIn + 1
-        elif line.p2 in linesDict:
-            linesDict[line.p2] += 1
-            numIn = numIn + 2
-    
-    if numIn == 0:
-        linesDict[line.p1] = 1
-        linesDict[line.p2] = 1
-    elif numIn == 1:
-        linesDict[line.p2] = 1
-    elif numIn == 2:
-        linesDict[line.p1] = 1 
-
-'''
 
 ########################################
 
@@ -461,7 +406,38 @@ def helperDesignatedRadius(click, size):
 
     pressFit.hide()
     slipButton.hide()
+    
+def helperDesignateSquareSize(click, length):
+    global waiting_for_second_box_click
+    global first_click
+    global mode
 
+    if mode == MODE_BOX:
+    #lines
+        l1 = Line(click, (click[0], click[1] + length), False)
+        l2 = Line(click, (click[0] + length, click[1]), False)
+        l3 = Line((click[0] + length, click[1]), (click[0] + length, click[1] + length), False)
+        l4 = Line((click[0], click[1] + length), (click[0] + length, click[1] + length), False)
+        lines.append(l1)
+        lines.append(l2)
+        lines.append(l3)
+        lines.append(l4)
+
+        squareSizeDropdown.hide()
+        squareRelease.hide()
+
+        waiting_for_second_box_click = False
+
+    if mode == MODE_LINE:
+        l1 = Line(click, (click[0]+length, click[1]+ length), False)
+
+        lines.append(l1)
+    
+    first_click = None
+    mode = MODE_NONE
+
+
+    
 
 # slip fit
 slipButton = Button(
@@ -478,8 +454,9 @@ margin = 20,  # Minimum distance between text/image and edge of button
 inactiveColour = (200, 50, 0),  # Colour of button when not being interacted with
 hoverColour = (150, 0, 0),  # Colour of button when being hovered over
 pressedColour = (0, 200, 20),  # Colour of button when being clicked
-onClick=lambda: helperDesignatedRadius(first_click, 10.0)  # Function to call when clicked on
+onClick = lambda: helperDesignatedRadius(first_click, 10.0)  # Function to call when clicked on
 )
+
 # press fit
 
 pressFit = Button(
@@ -499,6 +476,73 @@ pressedColour=(0, 200, 20),  # Colour of button when being clicked
 onClick = lambda: helperDesignatedRadius(first_click, 8.0)  # Function to call when clicked on
 )
  
+squareSizeDropdown = Dropdown (
+    canvas, 130, 80, 50, 50, name = 'Size',
+    choices=[
+        '20.0',
+        '30.0',
+        '40.0',
+    ],
+    borderRadius=3, 
+    inactiveColour=pygame.Color('Light Blue'),
+    pressedColour = pygame.Color('Orange'), 
+    values=[20.0 * 3.78, 30.0 * 3.78, 40.0 * 3.78], 
+    direction = 'right', 
+    textHAlign='left',
+    # onClick = lambda: helperDesignateSquareSize(first_click, squareSizeDropdown.getSelected())
+)
+
+def getValue(click):
+    temp = squareSizeDropdown.getSelected()
+    helperDesignateSquareSize(click, temp)
+
+squareRelease = Button(
+    canvas,  # Surface to place button on
+    80,  # X-coordinate of top left corner
+    80,  # Y-coordinate of top left corner
+    40,  # Width
+    40,  # Height
+
+# Optional Parameters
+text = 'Set Size',  # Text to display
+fontSize = 11,  # Size of font
+margin = 20,  # Minimum distance between text/image and edge of button
+inactiveColour=(200, 50, 0),  # Colour of button when not being interacted with
+hoverColour=(150, 0, 0),  # Colour of button when being hovered over
+pressedColour=(0, 200, 20),  # Colour of button when being clicked
+onClick = lambda: getValue(first_click) # Function to call when clicked on
+) 
+
+def helperLineSize():
+    global lengthNeeded 
+    lengthNeeded = True
+
+lineSize = Dropdown (
+    canvas, 70, 80, 50, 50, name = 'Length',
+    choices=[
+        '5,0',
+        '10.0',
+        '15.0',
+        '20.0',
+        '25.0',
+        '30.0',
+        '35.0',
+        '40.0'
+    ],
+    borderRadius = 3, 
+    inactiveColour = pygame.Color('Red'),
+    pressedColour = pygame.Color('Green'), 
+    values = [5.0 * 3.78, 10.0 * 3.78, 15.0 * 3.78,
+            20.0 * 3.78, 25.0 * 3.78, 30.0 * 3.78,
+            35.0 * 3.78, 40.0 * 3.78], 
+    direction = 'right', 
+    textHAlign = 'left',
+    onClick = lambda: helperLineSize()
+)
+
+def getValue(click):
+    temp = squareSizeDropdown.getSelected()
+    helperDesignateSquareSize(click, temp)
 
 # NOTE (Jim): this is how to hide/show widgets
 # pressFit.hide()
@@ -521,6 +565,9 @@ readDXF()
 
 pressFit.hide()
 slipButton.hide()
+squareSizeDropdown.hide()
+squareRelease.hide()
+lineSize.hide()
 
 while beginFrame():
     current_mouse_pos = pygame.mouse.get_pos()
@@ -580,6 +627,9 @@ while beginFrame():
 
         already_drew_gui_this_frame = True
 
+        if mode == MODE_LINE:
+            lineSize.show()
+
         if event == None:
             pass
         elif event.type == pygame.KEYDOWN:
@@ -606,11 +656,36 @@ while beginFrame():
                     if is_point_forbidden(second_click):
                         waiting_for_second_click = True
                         print('Cannot draw in forbidden zone')
+
+                    elif lengthNeeded:
+
+                        length = lineSize.getSelected()
+
+                        x1, y1 = first_click
+                        x2, y2 = second_click
+
+                        mag = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+                        if mag < length:
+                            lines.append(Line(first_click, second_click, False))
+                    
+                        else:   
+                            dx = ((x2 - x1) / mag) * length
+                            dy = ((y2 - y1) / mag) * length
+
+                            lines.append(Line(first_click, (x1 + dx, y1 + dy), False))
+                        
+                        lengthNeeded = False
+                        mode = MODE_NONE
+
                     else:
                         second_click = snapTo(second_click, "Line")
                         line = Line(first_click, second_click, False)
                         lines.append(line)
                         mode = MODE_NONE
+
+                    lineSize.hide()
+                    lineSize.reset()
 
             elif mode == MODE_CIRCLE:
                 
@@ -649,7 +724,6 @@ while beginFrame():
 
                     pressFit.hide()
                     slipButton.hide()
-                
 
             elif mode == MODE_ERASER:
                 click = event.pos
@@ -657,17 +731,6 @@ while beginFrame():
                 for line in lines:
                     if line.frozen:
                         continue
-                    
-                    '''
-                    p1_x, p1_y = line.p1
-                    p2_x, p2_y = line.p2
-
-                    p1_pos, p2_pos, p1_neg, p2_neg = get_parallel_lines(p1_x, p1_y, p2_x, p2_y)
-                    points = [p1_pos, p2_pos, p2_neg, p1_neg]
-                    
-                    if is_point_in_polygon(click, points):
-                        lines.remove(line)
-                    '''
 
                     toErase = eraseLine(line.p1, line.p2, click)
 
@@ -689,6 +752,10 @@ while beginFrame():
                 mode = MODE_NONE
 
             elif mode == MODE_BOX:
+
+                squareSizeDropdown.show()
+                squareRelease.show()
+
                 if not waiting_for_second_box_click:
                     waiting_for_second_box_click = True
                     first_click = event.pos
@@ -698,6 +765,12 @@ while beginFrame():
                     
                     else:
                         first_click = snapTo(first_click, "Line")  
+
+                    #squareSizeDropdown.setX(first_click[0] + 20)
+                    #squareSizeDropdown.setY(first_click[1] - 50)
+
+                    squareRelease.setX(first_click[0] + 20)
+                    squareRelease.setY(first_click[1] - 50)
 
                 else:
                     second_click = event.pos
@@ -717,6 +790,9 @@ while beginFrame():
                         lines.append(l4)
 
                         mode = MODE_NONE    
+
+                    squareSizeDropdown.hide()
+                    squareRelease.hide()
         
     # DRAW #################################
     
@@ -726,7 +802,24 @@ while beginFrame():
         drawC = pygame.draw.circle(canvas, color = "green", center = (SCREEN_WIDTH - 20, SCREEN_HEIGHT - 20), radius = 10)
 
     if waiting_for_second_click:
-        pygame.draw.line(canvas, "GREEN", first_click, current_mouse_pos, 2)
+        if lengthNeeded:
+            length = lineSize.getSelected()
+            x1, y1 = first_click
+            x2, y2 = current_mouse_pos
+        
+            mag = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+            if mag < length:
+                pygame.draw.line(canvas, "GREEN", first_click, current_mouse_pos, 2)
+                
+            else:   
+                dx = ((x2 - x1) / mag) * length
+                dy = ((y2 - y1) / mag) * length
+
+                pygame.draw.line(canvas, "GREEN", first_click, (first_click[0] + dx, first_click[1]+ dy), 2)
+        else:        
+            pygame.draw.line(canvas, "GREEN", first_click, current_mouse_pos, 2)
+        
 
     if waiting_for_second_box_click:
         pygame.draw.line(canvas, "GREEN", first_click, (first_click[0], current_mouse_pos[1]), 2)
