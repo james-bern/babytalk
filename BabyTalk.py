@@ -26,6 +26,7 @@ SCREEN_HEIGHT = 750
 (centerScreenX, centerScreenY) = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
 boxWidth = 200
 wallWidth = 40
+blockSize = 40
 
 
 ########################################
@@ -52,9 +53,9 @@ event_queue = None
 # file_name = "colortest.dxf"
 # file_name = "a.dxf"
 # file_name = "b.dxf"
-# file_name = "fidgetWorksheet.dxf"
+file_name = "fidgetWorksheet.dxf"
 # file_name = "boxWorksheet.dxf"
-file_name = "presentation.dxf"
+# file_name = "presentation.dxf"
 
 ########################################
 
@@ -113,7 +114,7 @@ def readDXF():
         elif e.dxftype() == "CIRCLE":
             center_x, center_y = e.dxf.center[0], e.dxf.center[1]
             radius = e.dxf.radius
-            if color == 6: 
+            if color == 7: 
                 snaps.append(Snap((centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), True))
             elif color == 2:
                 forbidden_regions.append(Forbidden((centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), radius * PPM, True))
@@ -160,9 +161,8 @@ def beginFrame():
 
     canvas.fill("WHITE")
     # draw grid
-    blockSize = 25
-    for x in range(0, SCREEN_WIDTH, blockSize):
-        for y in range(0, SCREEN_HEIGHT, blockSize):
+    for x in range(0, SCREEN_WIDTH, int(blockSize)):
+        for y in range(0, SCREEN_HEIGHT, int(blockSize)):
             rectGrid = pygame.Rect(x, y, blockSize, blockSize)
             pygame.draw.rect(canvas, color = (240,240,240), rect = rectGrid, width = 1)
 
@@ -256,7 +256,19 @@ def snapTo(point, shape):
                 return (line.p1[0], line.p1[1])
             elif abs(p1 - line.p2[0]) <= 25 and abs(p2 - line.p2[1]) <= 25:   
                 return (line.p2[0], line.p2[1])
-        
+    
+        if (p1 % blockSize < 2.5 or p1 % blockSize > blockSize - 2.5) and (p2 % blockSize < 2.5 or p2 % blockSize > blockSize - 2.5):
+            print("YESSSSSSSSSS")
+
+        print("POINT ONE")
+        print(p1)
+        print("POINT TWO")
+        print(p2)
+        print("DIFF ONE")
+        print((p1 % blockSize))
+        print("DIFF TWO")
+        print((p2 % blockSize))
+
     for snap in snaps:
         if abs(p1 - snap.p1[0]) <= 25 and abs(p2 - snap.p1[1]) <= 25:
             return (snap.p1[0], snap.p1[1])
@@ -367,6 +379,10 @@ lengthNeeded = False
 waiting_for_second_click_length = False
 length = None
 
+squareLengthNeeded = False
+waiting_for_second_click_square_length = False
+squareLength = None
+
 ########################################
 
 ########################################
@@ -423,8 +439,8 @@ def helperDesignateSquareSize(click, length):
         lines.append(l3)
         lines.append(l4)
 
-        squareSizeDropdown.hide()
-        squareRelease.hide()
+        #squareSizeDropdown.hide()
+        # squareRelease.hide()
 
         waiting_for_second_box_click = False
 
@@ -475,7 +491,36 @@ hoverColour=(150, 0, 0),  # Colour of button when being hovered over
 pressedColour=(0, 200, 20),  # Colour of button when being clicked
 onClick = lambda: helperDesignatedRadius(first_click, 8.0)  # Function to call when clicked on
 )
+
+def helperSquareSize():
+    global squareLengthNeeded
+    if not waiting_for_second_click:
+        squareLengthNeeded = True
  
+squareSize = Dropdown (
+    canvas, 80, 80, 60, 60, name = 'Length',
+    choices=[
+        '5.0',
+        '10.0',
+        '15.0',
+        '20.0',
+        '25.0',
+        '30.0',
+        '35.0',
+        '40.0'
+    ],
+    borderRadius = 3, 
+    inactiveColour = pygame.Color('Light Blue'),
+    pressedColour = pygame.Color('Green'), 
+    values = [5.0 * 3.78, 10.0 * 3.78, 15.0 * 3.78,
+            20.0 * 3.78, 25.0 * 3.78, 30.0 * 3.78,
+            35.0 * 3.78, 40.0 * 3.78], 
+    direction = 'right', 
+    textHAlign = 'left',
+    onClick = lambda: helperSquareSize()
+) 
+
+'''
 squareSizeDropdown = Dropdown (
     canvas, 130, 80, 50, 50, name = 'Size',
     choices=[
@@ -513,14 +558,16 @@ pressedColour=(0, 200, 20),  # Colour of button when being clicked
 onClick = lambda: getValue(first_click) # Function to call when clicked on
 ) 
 
+'''
+
 def helperLineSize():
     global lengthNeeded 
     lengthNeeded = True
 
 lineSize = Dropdown (
-    canvas, 70, 80, 50, 50, name = 'Length',
+    canvas, 80, 80, 60, 60, name = 'Length',
     choices=[
-        '5,0',
+        '5.0',
         '10.0',
         '15.0',
         '20.0',
@@ -530,7 +577,7 @@ lineSize = Dropdown (
         '40.0'
     ],
     borderRadius = 3, 
-    inactiveColour = pygame.Color('Red'),
+    inactiveColour = pygame.Color('Light Blue'),
     pressedColour = pygame.Color('Green'), 
     values = [5.0 * 3.78, 10.0 * 3.78, 15.0 * 3.78,
             20.0 * 3.78, 25.0 * 3.78, 30.0 * 3.78,
@@ -540,9 +587,6 @@ lineSize = Dropdown (
     onClick = lambda: helperLineSize()
 )
 
-def getValue(click):
-    temp = squareSizeDropdown.getSelected()
-    helperDesignateSquareSize(click, temp)
 
 # NOTE (Jim): this is how to hide/show widgets
 # pressFit.hide()
@@ -565,8 +609,9 @@ readDXF()
 
 pressFit.hide()
 slipButton.hide()
-squareSizeDropdown.hide()
-squareRelease.hide()
+#squareSizeDropdown.hide()
+#squareRelease.hide()
+squareSize.hide()
 lineSize.hide()
 
 while beginFrame():
@@ -625,11 +670,13 @@ while beginFrame():
             close_and_save()
 
 
+        pygame.draw.line(canvas, "black", (0, 160), (SCREEN_WIDTH, 160), width = 3)
         already_drew_gui_this_frame = True
 
         if mode == MODE_LINE:
             lineSize.show()
-
+        if mode == MODE_BOX:
+            squareSize.show()
         if event == None:
             pass
         elif event.type == pygame.KEYDOWN:
@@ -753,8 +800,8 @@ while beginFrame():
 
             elif mode == MODE_BOX:
 
-                squareSizeDropdown.show()
-                squareRelease.show()
+                #squareSizeDropdown.show()
+                #squareRelease.show()
 
                 if not waiting_for_second_box_click:
                     waiting_for_second_box_click = True
@@ -769,8 +816,8 @@ while beginFrame():
                     #squareSizeDropdown.setX(first_click[0] + 20)
                     #squareSizeDropdown.setY(first_click[1] - 50)
 
-                    squareRelease.setX(first_click[0] + 20)
-                    squareRelease.setY(first_click[1] - 50)
+                    #squareRelease.setX(first_click[0] + 20)
+                    #squareRelease.setY(first_click[1] - 50)
 
                 else:
                     second_click = event.pos
@@ -778,6 +825,29 @@ while beginFrame():
                     if is_point_forbidden(second_click):
                         waiting_for_second_box_click = True
                         print('Cannot draw in forbidden zone')
+
+                    elif squareLengthNeeded:
+                        squareLength = squareSize.getSelected()
+
+                        x1, y1 = first_click
+                        x2, y2 = second_click
+
+                        mag = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+                        sideLen = mag / (math.sqrt(2))
+
+                        if sideLen < squareLength:
+                            lines.append(Line(first_click, second_click, False))
+                    
+                        else:   
+                            dx = ((x2 - x1) / mag) * squareLength
+                            dy = ((y2 - y1) / mag) * squareLength
+
+                            lines.append(Line(first_click, (x1 + dx, y1 + dy), False))
+                        
+                        lengthNeeded = False
+                        mode = MODE_NONE
+
                     else:
                         second_click = snapTo(second_click, "Line")  
                         l1 = Line(first_click, (first_click[0], second_click[1]), False)
@@ -791,8 +861,10 @@ while beginFrame():
 
                         mode = MODE_NONE    
 
-                    squareSizeDropdown.hide()
-                    squareRelease.hide()
+                    #squareSizeDropdown.hide()
+                    #squareRelease.hide()
+                    squareSize.hide()
+                    squareSize.reset()
         
     # DRAW #################################
     
@@ -809,7 +881,9 @@ while beginFrame():
         
             mag = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-            if mag < length:
+            if length == None:
+                pass
+            elif mag < length:
                 pygame.draw.line(canvas, "GREEN", first_click, current_mouse_pos, 2)
                 
             else:   
