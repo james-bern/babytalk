@@ -252,25 +252,20 @@ def snapTo(point, shape):
     (p1, p2) = point
     if shape == "Line":
         for line in lines:
-            if abs(p1 - line.p1[0]) <= 25 and abs(p2 - line.p1[1]) <= 25:   
+            if abs(p1 - line.p1[0]) <= 20 and abs(p2 - line.p1[1]) <= 20:   
                 return (line.p1[0], line.p1[1])
-            elif abs(p1 - line.p2[0]) <= 25 and abs(p2 - line.p2[1]) <= 25:   
+            elif abs(p1 - line.p2[0]) <= 20 and abs(p2 - line.p2[1]) <= 20:   
                 return (line.p2[0], line.p2[1])
     
-        if (p1 % blockSize < 2.5 or p1 % blockSize > blockSize - 2.5) and (p2 % blockSize < 2.5 or p2 % blockSize > blockSize - 2.5):
-            print("YESSSSSSSSSS")
-
-        print("POINT ONE")
-        print(p1)
-        print("POINT TWO")
-        print(p2)
-        print("DIFF ONE")
-        print((p1 % blockSize))
-        print("DIFF TWO")
-        print((p2 % blockSize))
+        if (p1 % blockSize < 5 or p1 % blockSize > blockSize - 5) and (p2 % blockSize < 5 or p2 % blockSize > blockSize - 5):
+            closeX = round(p1/blockSize)
+            closeY = round(p2/blockSize)
+            newX = closeX * blockSize
+            newY = closeY * blockSize
+            return (newX, newY)
 
     for snap in snaps:
-        if abs(p1 - snap.p1[0]) <= 25 and abs(p2 - snap.p1[1]) <= 25:
+        if abs(p1 - snap.p1[0]) <= 20 and abs(p2 - snap.p1[1]) <= 20:
             return (snap.p1[0], snap.p1[1])
     return point
 
@@ -383,6 +378,9 @@ squareLengthNeeded = False
 waiting_for_second_click_square_length = False
 squareLength = None
 
+angleNeeded = True
+angleOnOff = False
+
 ########################################
 
 ########################################
@@ -451,9 +449,26 @@ def helperDesignateSquareSize(click, length):
     
     first_click = None
     mode = MODE_NONE
-
-
     
+def lineAngle(first, second):
+    
+
+    x1, y1 = first
+    x2, y2 = second
+
+    mag = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+    
+    x = x2 - x1
+    y = y2 - y1
+
+    theta = math.atan2(y, x)
+
+    newTheta = round(theta/(math.pi / 4)) * (math.pi / 4)
+
+    firstNew = mag * math.cos(newTheta)
+    secondNew = mag * math.sin(newTheta)
+
+    return Line(firstNew, secondNew, False)
 
 # slip fit
 slipButton = Button(
@@ -714,7 +729,12 @@ while beginFrame():
                         mag = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
                         if mag < length:
-                            lines.append(Line(first_click, second_click, False))
+                            if angleNeeded:
+                                line = lineAngle(first_click, second_click)
+
+                            else:
+                                line = Line(first_click, second_click, False)
+                            lines.append(line)
                     
                         else:   
                             dx = ((x2 - x1) / mag) * length
@@ -728,6 +748,10 @@ while beginFrame():
                     else:
                         second_click = snapTo(second_click, "Line")
                         line = Line(first_click, second_click, False)
+
+                        if angleNeeded:
+                            line = lineAngle(first_click, second_click)
+
                         lines.append(line)
                         mode = MODE_NONE
 
