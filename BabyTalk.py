@@ -59,7 +59,7 @@ file_name = "fidgetWorksheet.dxf"
 
 ########################################
 
-PPM = 3.7795275591
+PPM = 5
 
 def close_and_save():
     linesMM = []
@@ -378,7 +378,7 @@ squareLengthNeeded = False
 waiting_for_second_click_square_length = False
 squareLength = None
 
-angleNeeded = True
+angleNeeded = False
 angleOnOff = False
 
 ########################################
@@ -452,23 +452,22 @@ def helperDesignateSquareSize(click, length):
     
 def lineAngle(first, second):
     
-
     x1, y1 = first
     x2, y2 = second
 
     mag = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-    
+
     x = x2 - x1
     y = y2 - y1
 
     theta = math.atan2(y, x)
 
-    newTheta = round(theta/(math.pi / 4)) * (math.pi / 4)
+    newTheta = round(theta / (math.pi / 4)) * (math.pi / 4)
 
     firstNew = mag * math.cos(newTheta)
     secondNew = mag * math.sin(newTheta)
 
-    return Line(firstNew, secondNew, False)
+    return Line(first, (x1 + firstNew, y1 + secondNew), False)
 
 # slip fit
 slipButton = Button(
@@ -507,6 +506,38 @@ pressedColour=(0, 200, 20),  # Colour of button when being clicked
 onClick = lambda: helperDesignatedRadius(first_click, 8.0)  # Function to call when clicked on
 )
 
+def angleToggleFun():
+    global angleNeeded
+    global angleOnOff
+    if angleOnOff == False:
+        angleOnOff = True
+        angleNeeded = True
+        angleToggle.inactiveColour = "GREEN"
+        print("ON")
+    
+    else:
+        angleOnOff = False
+        angleNeeded = False
+        angleToggle.inactiveColour = "RED"
+        print("OFF")
+
+    
+
+angleToggle = Button(
+    canvas,  # Surface to place button on
+    10,  # X-coordinate of top left corner
+    80,  # Y-coordinate of top left corner
+    60,  # Width
+    60,  # Height
+
+# Optional Parameters
+text = 'Toggle 45˚',  # Text to display
+fontSize = 11,  # Size of font
+margin = 10,  # Minimum distance between text/image and edge of button
+inactiveColour = "RED",  # Colour of button when not being interacted with
+onClick = lambda: angleToggleFun()  # Function to call when clicked on
+)
+
 def helperSquareSize():
     global squareLengthNeeded
     if not waiting_for_second_click:
@@ -527,9 +558,9 @@ squareSize = Dropdown (
     borderRadius = 3, 
     inactiveColour = pygame.Color('Light Blue'),
     pressedColour = pygame.Color('Green'), 
-    values = [5.0 * 3.78, 10.0 * 3.78, 15.0 * 3.78,
-            20.0 * 3.78, 25.0 * 3.78, 30.0 * 3.78,
-            35.0 * 3.78, 40.0 * 3.78], 
+    values = [5.0 * 5, 10.0 * 5, 15.0 * 5,
+            20.0 * 5, 25.0 * 5, 30.0 * 5,
+            35.0 * 5, 40.0 * 5], 
     direction = 'right', 
     textHAlign = 'left',
     onClick = lambda: helperSquareSize()
@@ -594,9 +625,9 @@ lineSize = Dropdown (
     borderRadius = 3, 
     inactiveColour = pygame.Color('Light Blue'),
     pressedColour = pygame.Color('Green'), 
-    values = [5.0 * 3.78, 10.0 * 3.78, 15.0 * 3.78,
-            20.0 * 3.78, 25.0 * 3.78, 30.0 * 3.78,
-            35.0 * 3.78, 40.0 * 3.78], 
+    values = [5.0 * 5, 10.0 * 5, 15.0 * 5,
+            20.0 * 5, 25.0 * 5, 30.0 * 5,
+            35.0 * 5, 40.0 * 5], 
     direction = 'right', 
     textHAlign = 'left',
     onClick = lambda: helperLineSize()
@@ -740,7 +771,17 @@ while beginFrame():
                             dx = ((x2 - x1) / mag) * length
                             dy = ((y2 - y1) / mag) * length
 
-                            lines.append(Line(first_click, (x1 + dx, y1 + dy), False))
+                            newX2 = x1  + dx
+                            newY2 = y1 + dy
+                            
+
+                            if angleNeeded:
+                                line = lineAngle(first_click, (newX2, newY2))
+
+                            else:
+                                line = Line(first_click, (x1 + dx, y1 + dy), False)
+
+                            lines.append(line)
                         
                         lengthNeeded = False
                         mode = MODE_NONE
@@ -860,14 +901,31 @@ while beginFrame():
 
                         sideLen = mag / (math.sqrt(2))
 
+                        xmult = (x2 - x1) / abs((x2 - x1))
+                        ymult = (y2 - y1) / abs((y2 - y1))
+
                         if sideLen < squareLength:
-                            lines.append(Line(first_click, second_click, False))
+                            l1 = Line(first_click, (first_click[0], first_click[1] + ymult * sideLen), False)
+                            l2 = Line(first_click, (first_click[0] + xmult * sideLen, first_click[1]), False)
+                            l3 = Line((first_click[0] + xmult * sideLen,  first_click[1]), (first_click[0] + xmult * sideLen, first_click[1] + ymult* sideLen), False)
+                            l4 = Line((first_click[0], first_click[1] + ymult * sideLen), (first_click[0] + xmult * sideLen, first_click[1] + ymult * sideLen), False)
+                            lines.append(l1)
+                            lines.append(l2)
+                            lines.append(l3)
+                            lines.append(l4)
                     
                         else:   
-                            dx = ((x2 - x1) / mag) * squareLength
-                            dy = ((y2 - y1) / mag) * squareLength
+                            #dx = ((x2 - x1) / mag) * squareLength
+                            #dy = ((y2 - y1) / mag) * squareLength
 
-                            lines.append(Line(first_click, (x1 + dx, y1 + dy), False))
+                            l1 = Line(first_click, (first_click[0], first_click[1] + ymult * squareLength), False)
+                            l2 = Line(first_click, (first_click[0] + xmult * squareLength, first_click[1]), False)
+                            l3 = Line((first_click[0] + xmult * squareLength,  first_click[1]), (first_click[0] + xmult * squareLength, first_click[1] + ymult * squareLength), False)
+                            l4 = Line((first_click[0], first_click[1] + ymult * squareLength), (first_click[0] + xmult * squareLength, first_click[1] + ymult * squareLength), False)
+                            lines.append(l1)
+                            lines.append(l2)
+                            lines.append(l3)
+                            lines.append(l4)
                         
                         lengthNeeded = False
                         mode = MODE_NONE
@@ -898,7 +956,42 @@ while beginFrame():
         drawC = pygame.draw.circle(canvas, color = "green", center = (SCREEN_WIDTH - 20, SCREEN_HEIGHT - 20), radius = 10)
 
     if waiting_for_second_click:
-        if lengthNeeded:
+        if angleNeeded and lengthNeeded: 
+            length = lineSize.getSelected()
+            x1, y1 = first_click
+            x2, y2 = current_mouse_pos
+        
+            mag = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+            if length == None:
+                pass
+            
+            elif mag < length:
+                pygame.draw.line(canvas, "GREEN", first_click, current_mouse_pos, 2)
+                
+            else:   
+                dx = ((x2 - x1) / mag) * length
+                dy = ((y2 - y1) / mag) * length
+
+                newX = first_click[0] + dx
+                newY = first_click[1] + dy
+
+                mag = math.sqrt((newX - x1)**2 + (newY - y1)**2)
+
+                
+                shortX = newX - x1
+                shortY = newY - y1
+
+                shortTheta = math.atan2(shortY, shortX)
+
+                newTheta2 = round(shortTheta / (math.pi / 4)) * (math.pi / 4)
+
+                firstNew = mag * math.cos(newTheta2)
+                secondNew = mag * math.sin(newTheta2)
+
+                pygame.draw.line(canvas, "GREEN", first_click, (first_click[0] + firstNew, first_click[1]+ secondNew), 2)
+
+        elif lengthNeeded and not angleNeeded:
             length = lineSize.getSelected()
             x1, y1 = first_click
             x2, y2 = current_mouse_pos
@@ -915,15 +1008,65 @@ while beginFrame():
                 dy = ((y2 - y1) / mag) * length
 
                 pygame.draw.line(canvas, "GREEN", first_click, (first_click[0] + dx, first_click[1]+ dy), 2)
+        
+        elif angleNeeded and not lengthNeeded:
+            x1, y1 = first_click
+            x2, y2 = current_mouse_pos
+
+            mag = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+            x = x2 - x1
+            y = y2 - y1
+
+            theta = math.atan2(y, x)
+
+            newTheta = round(theta / (math.pi / 4)) * (math.pi / 4)
+
+            firstNew = mag * math.cos(newTheta)
+            secondNew = mag * math.sin(newTheta)
+
+            pygame.draw.line(canvas, "GREEN", first_click, (first_click[0] + firstNew, first_click[1] + secondNew), 2)
+        
+
         else:        
             pygame.draw.line(canvas, "GREEN", first_click, current_mouse_pos, 2)
         
 
     if waiting_for_second_box_click:
-        pygame.draw.line(canvas, "GREEN", first_click, (first_click[0], current_mouse_pos[1]), 2)
-        pygame.draw.line(canvas, "GREEN", first_click, (current_mouse_pos[0], first_click[1]), 2)
-        pygame.draw.line(canvas, "GREEN", (first_click[0], current_mouse_pos[1]), current_mouse_pos, 2)
-        pygame.draw.line(canvas, "GREEN", (current_mouse_pos[0], first_click[1]), current_mouse_pos, 2)
+        if squareLengthNeeded:
+            squareLength = squareSize.getSelected()
+
+            x1, y1 = first_click
+            x2, y2 = current_mouse_pos
+
+            mag = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+            sideLen = mag / (math.sqrt(2))
+
+            if squareLength == 0 or x2-x1 == 0 or y2-y1 == 0:
+                pass
+
+            if sideLen < squareLength:
+                pygame.draw.line(canvas, "GREEN", first_click, (first_click[0], current_mouse_pos[1]), 2)
+                pygame.draw.line(canvas, "GREEN", first_click, (current_mouse_pos[0], first_click[1]), 2)
+                pygame.draw.line(canvas, "GREEN", (first_click[0], current_mouse_pos[1]), current_mouse_pos, 2)
+                pygame.draw.line(canvas, "GREEN", (current_mouse_pos[0], first_click[1]), current_mouse_pos, 2)
+            
+            else:
+                xmult = (x2 - x1) / abs((x2 - x1))
+                ymult = (y2 - y1) / abs((y2 - y1))
+                
+                pygame.draw.line(canvas, "GREEN", first_click, (first_click[0], first_click[1] + ymult * squareLength), 2)
+                pygame.draw.line(canvas, "GREEN", first_click, (first_click[0] + xmult * squareLength, first_click[1]), 2)
+                pygame.draw.line(canvas, "GREEN", (first_click[0] + xmult * squareLength,  first_click[1]), (first_click[0] + xmult * squareLength, first_click[1] + ymult * squareLength), 2)
+                pygame.draw.line(canvas, "GREEN", (first_click[0], first_click[1] + ymult * squareLength), (first_click[0] + xmult * squareLength, first_click[1] + ymult * squareLength), 2)
+
+
+        else:
+            pygame.draw.line(canvas, "GREEN", first_click, (first_click[0], current_mouse_pos[1]), 2)
+            pygame.draw.line(canvas, "GREEN", first_click, (current_mouse_pos[0], first_click[1]), 2)
+            pygame.draw.line(canvas, "GREEN", (first_click[0], current_mouse_pos[1]), current_mouse_pos, 2)
+            pygame.draw.line(canvas, "GREEN", (current_mouse_pos[0], first_click[1]), current_mouse_pos, 2)
         
     if waiting_for_second_click_circle:
         current_rad = math.sqrt(math.pow(current_mouse_pos[0] - first_click[0], 2) + math.pow(current_mouse_pos[1] - first_click[1], 2))
