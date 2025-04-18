@@ -1,3 +1,5 @@
+# TODO: Snaps (purple circles)
+
 
 import pygame
 import sys
@@ -46,8 +48,6 @@ file_name = "a.dxf"
 
 PPM = 3.7795275591
 
-
-
 ###DXF READER###########################
 
 def readDXF():
@@ -76,6 +76,7 @@ def readDXF():
             circles.append(Circle((centerScreenX + PPM * center_x, centerScreenY - PPM * center_y), radius * PPM, frozen))        
         else:
             print("WARNING: UnrecognizedEntity - " + str(e))
+
 ########################################
 
 def grid():
@@ -154,9 +155,6 @@ class Line:
         pygame.draw.line(canvas, color, (self.p1[0], self.p1[1]), (self.p2[0], self.p2[1]), 2)
 
         # TODO: Converts to Pixel Coordinates and Draws
-        # pygame.draw.line(canvas, "BLACK",
-        #                (PPM * self.p1[0], PPM * self.p1[1]),
-        #                (PPM * self.p2[0], PPM * self.p2[1]))
 
 class Circle:
     def __init__(self, p1, r, frozen):
@@ -170,6 +168,7 @@ class Circle:
     
 ########################################
 
+'''
 def anchorSquare(point):
     (x,y) = point
 
@@ -206,7 +205,7 @@ def anchorSquare(point):
         
     return (x,y)
 
-
+'''
 ########################################
 
 def snap(point):
@@ -311,7 +310,7 @@ def checkComplete():
     return count
 
 ########################################
-
+'''
 def checkBearingCircle(point):
     (x, y) = point
     dist = math.sqrt((centerScreenX - x) ** 2 + (centerScreenY - y) ** 2)
@@ -320,6 +319,7 @@ def checkBearingCircle(point):
     
     return False
 
+'''
 ########################################
 
 
@@ -341,7 +341,7 @@ while beginFrame():
     grid()
 
     ## DRAWING ANCHORS FOR SQUARE####################
-    
+    '''
     if PROGRAM == 1:
         pygame.draw.circle(canvas, color = "red", center = (centerScreenX - boxWidth, centerScreenY - boxWidth), radius = 4)
         pygame.draw.circle(canvas, color = "red", center = (centerScreenX - boxWidth, centerScreenY + boxWidth), radius = 4)
@@ -358,7 +358,8 @@ while beginFrame():
         pygame.draw.circle(canvas, color = "red", center = (centerScreenX, centerScreenY), radius = 60, width = 2)
         pygame.draw.circle(canvas, color = "yellow", center = (centerScreenX, centerScreenY), radius = 40, width = 2)
         
-        
+    '''  
+    
     # DRAWING LEGEND #######################
     pygame.draw.rect(canvas, color = (162, 189, 235), rect = (10,10,60,60))
     lineFont = pygame.font.Font(None, 32)
@@ -421,9 +422,20 @@ while beginFrame():
             if not waiting_for_second_click:
                 waiting_for_second_click = True
                 first_click = event.pos
+                if lines != []:
+                    first_click = snap(first_click)
+                    if first_click in linesDict:
+                        linesDict[first_click] += 1
+                    else:
+                        linesDict[first_click] = 1
+                else:
+                    linesDict[first_click] = 1
+                
+                '''
+
                 if PROGRAM == 1:
                     first_click = anchorSquare(first_click)
-                if PROGRAM == 2:
+                #if PROGRAM == 2:
                     if checkBearingCircle(first_click):
                         if lines != []:
                             first_click = snap(first_click)
@@ -436,7 +448,7 @@ while beginFrame():
                     else: 
                         waiting_for_second_click = False
                         
-                if PROGRAM == 3:
+                #if PROGRAM == 3:
                     if lines != []:
                         first_click = snap(first_click)
                         if first_click in linesDict:
@@ -446,9 +458,22 @@ while beginFrame():
                     else:
                         linesDict[first_click] = 1
             
+            '''
+            
             else: 
                 second_click = event.pos
                 waiting_for_second_click = False
+                if lines != []:
+                    second_click = snap(second_click)
+                    if second_click in linesDict:
+                        linesDict[second_click] += 1
+                    else:
+                        linesDict[second_click] = 1
+                else:
+                    linesDict[second_click] = 1
+
+                '''
+
                 if PROGRAM == 1:
                     second_click = anchorSquare(second_click)
                 if PROGRAM == 2:
@@ -471,7 +496,7 @@ while beginFrame():
                     else:
                         linesDict[second_click] = 1
                         
-                        
+                '''        
                 lines.append(Line(first_click, second_click, False))
                 MODE = 0
                 

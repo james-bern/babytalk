@@ -21,12 +21,12 @@ from pygame_widgets.dropdown import Dropdown
 pygame.init()
 os.system('clear')
 
-SCREEN_WIDTH = 1000
-SCREEN_HEIGHT = 750
-(centerScreenX, centerScreenY) = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+SCREEN_WIDTH = 1039
+SCREEN_HEIGHT = 803
+(centerScreenX, centerScreenY) = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 47)
 boxWidth = 200
 wallWidth = 40
-blockSize = 40
+blockSize = 18.8976377953 * 2.5
 
 
 ########################################
@@ -53,13 +53,16 @@ event_queue = None
 # file_name = "colortest.dxf"
 # file_name = "a.dxf"
 # file_name = "b.dxf"
-file_name = "fidgetWorksheet.dxf"
-# file_name = "boxWorksheet.dxf"
+# file_name = "fidgetWorksheet.dxf"
+# file_name = "snapWorksheet.dxf"
 # file_name = "presentation.dxf"
+# file_name = "snapTest.dxf"
+#file_name = "fidgetTest2.dxf"
+file_name = "finalFidget.dxf"
 
 ########################################
 
-PPM = 5
+PPM = 8.0
 
 def close_and_save():
     linesMM = []
@@ -250,82 +253,29 @@ def is_point_forbidden(point):
 
 def snapTo(point, shape):
     (p1, p2) = point
+
+    blockSnap = round(blockSize)
+
     if shape == "Line":
         for line in lines:
-            if abs(p1 - line.p1[0]) <= 20 and abs(p2 - line.p1[1]) <= 20:   
+            if abs(p1 - line.p1[0]) <= 10 and abs(p2 - line.p1[1]) <= 10:   
                 return (line.p1[0], line.p1[1])
-            elif abs(p1 - line.p2[0]) <= 20 and abs(p2 - line.p2[1]) <= 20:   
+            elif abs(p1 - line.p2[0]) <= 10 and abs(p2 - line.p2[1]) <= 10:   
                 return (line.p2[0], line.p2[1])
     
-        if (p1 % blockSize < 5 or p1 % blockSize > blockSize - 5) and (p2 % blockSize < 5 or p2 % blockSize > blockSize - 5):
-            closeX = round(p1/blockSize)
-            closeY = round(p2/blockSize)
-            newX = closeX * blockSize
-            newY = closeY * blockSize
+        if (p1 % blockSnap < 5 or p1 % blockSnap > blockSnap - 5) and (p2 % blockSnap < 5 or p2 % blockSnap > blockSnap - 5):
+            closeX = round(p1/blockSnap)
+            closeY = round(p2/blockSnap)
+            newX = closeX * blockSnap
+            newY = closeY * blockSnap
             return (newX, newY)
 
     for snap in snaps:
-        if abs(p1 - snap.p1[0]) <= 20 and abs(p2 - snap.p1[1]) <= 20:
+        if abs(p1 - snap.p1[0]) <= 10 and abs(p2 - snap.p1[1]) <= 10:
             return (snap.p1[0], snap.p1[1])
     return point
 
 
-
-########################################
-'''
-def is_point_in_polygon(point, polygon_points):
-    
-    x, y = point
-    n = len(polygon_points)
-    inside = False
-    
-    p1x, p1y = polygon_points[0]
-    
-    for i in range(n + 1):
-        p2x, p2y = polygon_points[i % n]
-        
-        if min(p1y, p2y) < y <= max(p1y, p2y):
-           
-            if x <= max(p1x, p2x):
-               
-                if p1y != p2y:
-                    xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or x <= xinters:
-                        inside = not inside
-        
-        p1x, p1y = p2x, p2y
-    
-    return inside
-    
-########################################
-
-def get_parallel_lines(x1, y1, x2, y2, distance=25):
-   
-    dx = x2 - x1
-    dy = y2 - y1
-    
-    length = math.sqrt(dx*dx + dy*dy)
-    
-    if length != 0:
-        dx = dx/length
-        dy = dy/length
-    
-    perpx = -dy
-    perpy = dx
-    
-    line1_x1 = round(x1 + perpx * distance, 3)
-    line1_y1 = round(y1 + perpy * distance, 3)
-    line1_x2 = round(x2 + perpx * distance, 3)
-    line1_y2 = round(y2 + perpy * distance, 3)
-    
-    line2_x1 = round(x1 - perpx * distance, 3)
-    line2_y1 = round(y1 - perpy * distance, 3)
-    line2_x2 = round(x2 - perpx * distance, 3)
-    line2_y2 = round(y2 - perpy * distance, 3)
-    
-    return (line1_x1, line1_y1), (line1_x2, line1_y2), (line2_x1, line2_y1), (line2_x2, line2_y2)
-
-'''
 ########################################
 
 def eraseCircle(circle, point):
