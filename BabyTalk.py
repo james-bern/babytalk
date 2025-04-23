@@ -26,7 +26,7 @@ SCREEN_HEIGHT = 803
 (centerScreenX, centerScreenY) = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 47)
 boxWidth = 200
 wallWidth = 40
-blockSize = 18.8976377953 * 2.5
+blockSize = 38
 
 
 ########################################
@@ -57,8 +57,10 @@ event_queue = None
 # file_name = "snapWorksheet.dxf"
 # file_name = "presentation.dxf"
 # file_name = "snapTest.dxf"
-#file_name = "fidgetTest2.dxf"
-file_name = "finalFidget.dxf"
+# file_name = "fidgetTest2.dxf"
+# file_name = "finalFidget.dxf"
+
+file_name = "blank.dxf"
 
 ########################################
 
