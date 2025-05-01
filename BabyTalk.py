@@ -59,8 +59,8 @@ event_queue = None
 # file_name = "snapTest.dxf"
 # file_name = "fidgetTest2.dxf"
 # file_name = "finalFidget.dxf"
-
-file_name = "blank.dxf"
+file_name = "snowFidget.dxf"
+# file_name = "blank.dxf"
 
 ########################################
 
@@ -299,6 +299,9 @@ def eraseLine(lineA, lineB, point):
     top = abs(((x_b - x_a) * (p_2 - y_a)) - ((y_b - y_a) * (p_1 - x_a)))
     bottom = math.sqrt((x_b - x_a)**2 + (y_b -y_a)**2)
 
+    if bottom == 0:
+        return True
+
     d = top / bottom
 
     if d < 20:
@@ -518,45 +521,6 @@ squareSize = Dropdown (
     onClick = lambda: helperSquareSize()
 ) 
 
-'''
-squareSizeDropdown = Dropdown (
-    canvas, 130, 80, 50, 50, name = 'Size',
-    choices=[
-        '20.0',
-        '30.0',
-        '40.0',
-    ],
-    borderRadius=3, 
-    inactiveColour=pygame.Color('Light Blue'),
-    pressedColour = pygame.Color('Orange'), 
-    values=[20.0 * 3.78, 30.0 * 3.78, 40.0 * 3.78], 
-    direction = 'right', 
-    textHAlign='left',
-    # onClick = lambda: helperDesignateSquareSize(first_click, squareSizeDropdown.getSelected())
-)
-
-def getValue(click):
-    temp = squareSizeDropdown.getSelected()
-    helperDesignateSquareSize(click, temp)
-
-squareRelease = Button(
-    canvas,  # Surface to place button on
-    80,  # X-coordinate of top left corner
-    80,  # Y-coordinate of top left corner
-    40,  # Width
-    40,  # Height
-
-# Optional Parameters
-text = 'Set Size',  # Text to display
-fontSize = 11,  # Size of font
-margin = 20,  # Minimum distance between text/image and edge of button
-inactiveColour=(200, 50, 0),  # Colour of button when not being interacted with
-hoverColour=(150, 0, 0),  # Colour of button when being hovered over
-pressedColour=(0, 200, 20),  # Colour of button when being clicked
-onClick = lambda: getValue(first_click) # Function to call when clicked on
-) 
-
-'''
 
 def helperLineSize():
     global lengthNeeded 
