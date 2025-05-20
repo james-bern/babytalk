@@ -26,7 +26,7 @@ SCREEN_HEIGHT = 803
 (centerScreenX, centerScreenY) = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 47)
 boxWidth = 200
 wallWidth = 40
-blockSize = 38
+blockSize = 40
 
 
 ########################################
@@ -59,12 +59,16 @@ event_queue = None
 # file_name = "snapTest.dxf"
 # file_name = "fidgetTest2.dxf"
 # file_name = "finalFidget.dxf"
-file_name = "snowFidget.dxf"
+# file_name = "circleExample.dxf"
+# file_name = "snowFidget.dxf"
 # file_name = "blank.dxf"
+# file_name = "eveFidget.dxf"
+file_name = "lucaFidget.dxf"
+# file_name = "fidgetCompleteExample.dxf"
 
 ########################################
 
-PPM = 8.0
+PPM = 6.0
 
 def close_and_save():
     linesMM = []
@@ -272,6 +276,14 @@ def snapTo(point, shape):
             newY = closeY * blockSnap
             return (newX, newY)
 
+    if shape == "Circle":
+        if (p1 % blockSnap < 5 or p1 % blockSnap > blockSnap - 5) and (p2 % blockSnap < 5 or p2 % blockSnap > blockSnap - 5):
+            closeX = round(p1/blockSnap)
+            closeY = round(p2/blockSnap)
+            newX = closeX * blockSnap
+            newY = closeY * blockSnap
+            return (newX, newY)
+
     for snap in snaps:
         if abs(p1 - snap.p1[0]) <= 10 and abs(p2 - snap.p1[1]) <= 10:
             return (snap.p1[0], snap.p1[1])
@@ -383,10 +395,10 @@ def helperDesignateSquareSize(click, length):
 
     if mode == MODE_BOX:
     #lines
-        l1 = Line(click, (click[0], click[1] + length), False)
-        l2 = Line(click, (click[0] + length, click[1]), False)
-        l3 = Line((click[0] + length, click[1]), (click[0] + length, click[1] + length), False)
-        l4 = Line((click[0], click[1] + length), (click[0] + length, click[1] + length), False)
+        l1 = Line(click, (click[0], click[1] + length * PPM), False)
+        l2 = Line(click, (click[0] + length * PPM, click[1]), False)
+        l3 = Line((click[0] + length * PPM, click[1]), (click[0] + length * PPM, click[1] + length * PPM), False)
+        l4 = Line((click[0], click[1] + length * PPM), (click[0] + length * PPM, click[1] + length * PPM), False)
         lines.append(l1)
         lines.append(l2)
         lines.append(l3)
@@ -398,7 +410,7 @@ def helperDesignateSquareSize(click, length):
         waiting_for_second_box_click = False
 
     if mode == MODE_LINE:
-        l1 = Line(click, (click[0]+length, click[1]+ length), False)
+        l1 = Line(click, (click[0] + (length * PPM), click[1] + (length * PPM)), False)
 
         lines.append(l1)
     
@@ -541,9 +553,9 @@ lineSize = Dropdown (
     borderRadius = 3, 
     inactiveColour = pygame.Color('Light Blue'),
     pressedColour = pygame.Color('Green'), 
-    values = [5.0 * 5, 10.0 * 5, 15.0 * 5,
-            20.0 * 5, 25.0 * 5, 30.0 * 5,
-            35.0 * 5, 40.0 * 5], 
+    values = [5.0 * PPM, 10.0 * PPM, 15.0 * PPM,
+            20.0 * PPM, 25.0 * PPM, 30.0 * PPM,
+            35.0 * PPM, 40.0 * PPM], 
     direction = 'right', 
     textHAlign = 'left',
     onClick = lambda: helperLineSize()
@@ -830,9 +842,7 @@ while beginFrame():
                             lines.append(l3)
                             lines.append(l4)
                     
-                        else:   
-                            #dx = ((x2 - x1) / mag) * squareLength
-                            #dy = ((y2 - y1) / mag) * squareLength
+                        else: 
 
                             l1 = Line(first_click, (first_click[0], first_click[1] + ymult * squareLength), False)
                             l2 = Line(first_click, (first_click[0] + xmult * squareLength, first_click[1]), False)
